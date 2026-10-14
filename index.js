@@ -11,7 +11,7 @@ import path from 'node:path';
 const AUTH_DIR = process.env.WA_AUTH_DIR || './auth_info';
 const args = process.argv.slice(2);
 const verbose = args.includes('--trace');
-const includeSelf = args.includes('--include-self');
+const includeSelf = args.includes('--include-self') || !args.includes('--no-include-self');
 const getOption = (name) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
@@ -58,7 +58,7 @@ function buildStatusAudience(socket) {
     const ownJid = socket.user?.id || '';
     const ownNumber = ownJid.split('@')[0].split(':')[0].replace(/\D/g, '');
     if (!/^\d{8,15}$/.test(ownNumber)) {
-      throw new Error('Could not resolve your own phone-number JID. Reconnect and retry without --include-self.');
+      throw new Error('Could not resolve your own phone-number JID. Reconnect and retry with --no-include-self.');
     }
     audience.push(`${ownNumber}@s.whatsapp.net`);
   }
@@ -79,22 +79,23 @@ Upload an image:
 Upload a video with caption:
   node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx,62813xxxxxxx --caption "Hello"
 
-Experimental sender visibility workaround:
-  node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --include-self
+Sender visibility workaround is enabled by default. Disable it only if needed:
+  node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --no-include-self
 
 Options:
   --upload PATH    Image/video file to send as a Status
   --to NUMBERS     Comma-separated recipient numbers in international format
   --caption TEXT   Optional caption
-  --include-self   Also add your own account's phone-number JID to the Status audience
+  --include-self      Explicitly enable adding your own account to the Status audience (default)\n  --no-include-self   Disable adding your own account to the Status audience
   --trace          Verbose Baileys protocol logs (may include sensitive metadata)
   --help           Show this help
 
 Notes:
   - Keep auth_info private; it contains login credentials.
   - This tool does not re-encode media. WhatsApp may still compress uploads.
-  - --include-self is experimental: it may help the sender's linked devices receive the Status,
-    but cannot guarantee that the primary WhatsApp app displays it under "My Status".
+  - The sender account is included in the audience by default as an experimental visibility workaround.
+    --no-include-self disables this. It may help linked devices receive the Status, but cannot guarantee
+    that the primary WhatsApp app displays it under "My Status".
   - A returned message ID is not proof that a Status was published. Check the trace ACK and
     recipient receipts; do not assume sendMessage() success means upload success.
 `);
@@ -130,7 +131,7 @@ async function uploadStatus(socket) {
     console.log(`Size: ${(info.size / 1024 / 1024).toFixed(2)} MB`);
     console.log(`Explicit contacts selected: ${recipients.length}`);
     console.log(`Status audience entries: ${statusAudience.length}`);
-    console.log(`Include sender account: ${includeSelf ? 'yes (experimental)' : 'no'}`);
+    console.log(`Include sender account: ${includeSelf ? 'yes (experimental default)' : 'no'}`);
     console.log('Sending Status request...');
 
     const result = await socket.sendMessage('status@broadcast', content, {
