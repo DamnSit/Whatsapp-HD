@@ -2,7 +2,7 @@
 
 A small Node.js CLI intended to run locally in Termux on Android. It uses Baileys to send image/video Status updates from local files to a selected recipient list.
 
-> **Important limitation:** a Status can be visible to selected contacts without appearing under "My Status" on the sender's primary WhatsApp app. This symptom has also been reported by users of other Baileys-based tools ([Evolution API issue #2528](https://github.com/evolution-foundation/evolution-api/issues/2528)); the report does not establish a confirmed fix. This project provides an experimental `--include-self` option to test whether adding the sender's own phone-number JID to the audience helps the sender's linked devices receive the Status. It is not guaranteed to synchronize the primary app's Status UI.
+> **Important limitation:** a Status can be visible to selected contacts without appearing under "My Status" on the sender's primary WhatsApp app. This symptom has also been reported by users of other Baileys-based tools ([Evolution API issue #2528](https://github.com/evolution-foundation/evolution-api/issues/2528)); the report does not establish a confirmed fix. This project now adds the sender's own phone-number JID to the Status audience by default as an experimental workaround. It is not guaranteed to synchronize the primary app's Status UI. Use `--no-include-self` to disable the workaround.
 
 ## Requirements
 
@@ -58,13 +58,13 @@ Use comma-separated phone numbers to target more than one contact. The script do
 
 ## Experimental workaround for sender visibility
 
-When the target contact can view a Status but it does not appear under "My Status" on the sender's main phone, test with `--include-self`:
+The sender's own phone-number JID is now included in the Status audience by default, in addition to the explicitly selected contacts:
 
 ```sh
-node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --caption "Hello" --include-self
+node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --caption "Hello"
 ```
 
-This adds the sender's own phone-number JID to the same audience list as the selected contacts. It does not add any other external contacts. The option is experimental: verify the result on both phones. Do not assume it worked merely because an ID was returned.
+This does not add any other external contacts. The workaround is experimental: verify the result on both phones. Do not assume it worked merely because an ID was returned. If it causes a send error or you want the previous audience behavior, disable it with `--no-include-self`.
 
 ## Supported media
 
@@ -93,6 +93,6 @@ Do not repeatedly delete or reset `auth_info` to troubleshoot Status visibility.
 - [x] Local image/video path handling
 - [x] Optional caption and recipient list
 - [x] Explicit warning that a returned message ID is not delivery confirmation
-- [x] Experimental `--include-self` option for testing sender-device visibility
+- [x] Experimental sender-account audience workaround enabled by default; can be disabled with `--no-include-self`
 - [ ] Verified sender-side Status UI synchronization across WhatsApp versions
 - [ ] Confirmed upstream fix for Baileys Status/LID edge cases
