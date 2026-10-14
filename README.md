@@ -1,8 +1,8 @@
 # WhatsApp HD
 
-A small Node.js CLI intended to run locally in Termux on Android. It uses Baileys to link a WhatsApp device and attempt to publish image/video Status updates from local files.
+A small Node.js CLI intended to run locally in Termux on Android. It uses Baileys to send image/video Status updates from local files to a selected recipient list.
 
-> **Important limitation:** this project currently pins `@whiskeysockets/baileys@7.0.0-rc14`. Baileys has a reported issue where Status sends on LID-migrated accounts receive server ACK `479` even though `sendMessage()` returns a message ID. A message ID is not proof that a Status was published. See [Baileys issue #2794](https://github.com/WhiskeySockets/Baileys/issues/2794). This project logs the limitation; it does not claim to have fixed Baileys' underlying PN-to-LID recipient resolution.
+> **Important limitation:** a Status can be visible to selected contacts without appearing under "My Status" on the sender's primary WhatsApp app. This symptom has also been reported by users of other Baileys-based tools ([Evolution API issue #2528](https://github.com/evolution-foundation/evolution-api/issues/2528)); the report does not establish a confirmed fix. This project provides an experimental `--include-self` option to test whether adding the sender's own phone-number JID to the audience helps the sender's linked devices receive the Status. It is not guaranteed to synchronize the primary app's Status UI.
 
 ## Requirements
 
@@ -21,7 +21,10 @@ pkg install nodejs-lts git
 git clone https://github.com/DamnSit/Whatsapp-HD.git
 cd Whatsapp-HD
 npm install
+npm run check
 ```
+
+If npm reports that dependency install scripts are blocked, review them before approving. Baileys and protobufjs use install scripts; only approve scripts for packages you trust.
 
 ## First-time pairing
 
@@ -37,21 +40,35 @@ Enter the pairing code printed by Termux. Wait until the CLI reports that WhatsA
 
 Credentials are stored in `./auth_info`. Keep this directory private. Do not commit it, upload it, or share its contents.
 
-## Upload an image Status
+## Upload a Status to selected contacts
 
-Use an absolute path to a local file and include the intended recipient numbers in international format:
+Image:
 
 ```sh
 node index.js --upload "/storage/emulated/0/Pictures/status.jpg" --to 62812xxxxxxx
 ```
 
-## Upload a video Status with caption
+Video with a caption:
 
 ```sh
-node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx,62813xxxxxxx --caption "Hello"
+node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --caption "Hello"
 ```
 
-Supported extensions: JPG, JPEG, PNG, WebP, MP4, and M4V. The script does not re-encode media, but WhatsApp may still compress it. This is not a guarantee of original-quality delivery.
+Use comma-separated phone numbers to target more than one contact. The script does not set WhatsApp's account-level Status privacy settings; make sure those settings allow the intended contacts to view your Status.
+
+## Experimental workaround for sender visibility
+
+When the target contact can view a Status but it does not appear under "My Status" on the sender's main phone, test with `--include-self`:
+
+```sh
+node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --caption "Hello" --include-self
+```
+
+This adds the sender's own phone-number JID to the same audience list as the selected contacts. It does not add any other external contacts. The option is experimental: verify the result on both phones. Do not assume it worked merely because an ID was returned.
+
+## Supported media
+
+Supported extensions: JPG, JPEG, PNG, WebP, MP4, and M4V. The script does not re-encode media, but WhatsApp may still compress uploads. This is not a guarantee of original-quality delivery.
 
 Grant shared-storage access in Termux if needed:
 
@@ -65,16 +82,17 @@ termux-setup-storage
 node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --trace
 ```
 
-Trace logs can contain sensitive protocol metadata. Review and redact logs before sharing them. If the Status is absent, look for a server ACK with `error="479"`. If present, the current Baileys version may be rejecting the Status request even though a message ID was returned.
+Trace logs can contain sensitive protocol metadata and cryptographic session details. Review and redact logs before sharing them. Check for a server ACK with `error="479"`, recipient `receipt` events, or `type="read"` receipts. A successful `sendMessage()` return and message ID alone do not confirm publication.
 
-## Current status
+Do not repeatedly delete or reset `auth_info` to troubleshoot Status visibility. Session authentication and Status publication/synchronization are separate problems.
+
+## Project status
 
 - [x] Termux / Node.js CLI scaffold
 - [x] Pairing-code flow and local multi-file auth
 - [x] Local image/video path handling
 - [x] Optional caption and recipient list
 - [x] Explicit warning that a returned message ID is not delivery confirmation
-- [ ] Confirmed working Status publishing on LID-migrated accounts
-- [ ] Upstream fix or tested patch for Baileys ACK 479
-
-Do not repeatedly delete or reset `auth_info` to troubleshoot a Status publishing issue. Session authentication and Status delivery are separate problems.
+- [x] Experimental `--include-self` option for testing sender-device visibility
+- [ ] Verified sender-side Status UI synchronization across WhatsApp versions
+- [ ] Confirmed upstream fix for Baileys Status/LID edge cases
