@@ -11,6 +11,7 @@ import path from 'node:path';
 const AUTH_DIR = process.env.WA_AUTH_DIR || './auth_info';
 const args = process.argv.slice(2);
 const verbose = args.includes('--trace');
+const includeSelf = args.includes('--include-self');
 const getOption = (name) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
@@ -48,6 +49,23 @@ function normalizeNumber(input) {
   return number;
 }
 
+function buildStatusAudience(socket) {
+  const audience = [...recipients];
+
+  if (includeSelf) {
+    // Keep the sender in PN format, like the explicit recipients. Do not mix PN and LID
+    // addressing in the same statusJidList; Baileys 7.0.0-rc14 has known LID edge cases.
+    const ownJid = socket.user?.id || '';
+    const ownNumber = ownJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+    if (!/^\d{8,15}$/.test(ownNumber)) {
+      throw new Error('Could not resolve your own phone-number JID. Reconnect and retry without --include-self.');
+    }
+    audience.push(`${ownNumber}@s.whatsapp.net`);
+  }
+
+  return [...new Set(audience)];
+}
+
 function usage() {
   console.log(`
 WhatsApp HD — local Termux CLI
@@ -61,26 +79,32 @@ Upload an image:
 Upload a video with caption:
   node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx,62813xxxxxxx --caption "Hello"
 
+Experimental sender visibility workaround:
+  node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --include-self
+
 Options:
-  --upload PATH   Image/video file to send as a Status
-  --to NUMBERS    Comma-separated recipient numbers in international format
-  --caption TEXT  Optional caption
-  --trace         Verbose Baileys protocol logs (may include sensitive metadata)
-  --help          Show this help
+  --upload PATH    Image/video file to send as a Status
+  --to NUMBERS     Comma-separated recipient numbers in international format
+  --caption TEXT   Optional caption
+  --include-self   Also add your own account's phone-number JID to the Status audience
+  --trace          Verbose Baileys protocol logs (may include sensitive metadata)
+  --help           Show this help
 
 Notes:
   - Keep auth_info private; it contains login credentials.
   - This tool does not re-encode media. WhatsApp may still compress uploads.
-  - Baileys 7.0.0-rc14 has a reported status@broadcast ACK 479/LID addressing issue.
-    A returned message ID does NOT prove that WhatsApp published the Status.
+  - --include-self is experimental: it may help the sender's linked devices receive the Status,
+    but cannot guarantee that the primary WhatsApp app displays it under "My Status".
+  - A returned message ID is not proof that a Status was published. Check the trace ACK and
+    recipient receipts; do not assume sendMessage() success means upload success.
 `);
 }
 
 async function uploadStatus(socket) {
   if (!uploadPath || uploadStarted) return;
   if (recipients.length === 0) {
-    console.error('Upload not started: pass --to with one or more recipient numbers.');
-    console.error('Example: --to 62812xxxxxxx,62813xxxxxxx');
+    console.error('Upload not started: pass --to with one or more recipient phone numbers.');
+    console.error('Example: --to 62812xxxxxxx');
     return;
   }
 
@@ -100,20 +124,27 @@ async function uploadStatus(socket) {
       throw new Error('Supported formats: JPG, JPEG, PNG, WebP, MP4, M4V.');
     }
 
+    const statusAudience = buildStatusAudience(socket);
+
     console.log(`File: ${file}`);
     console.log(`Size: ${(info.size / 1024 / 1024).toFixed(2)} MB`);
-    console.log(`Recipients selected: ${recipients.length}`);
+    console.log(`Explicit contacts selected: ${recipients.length}`);
+    console.log(`Status audience entries: ${statusAudience.length}`);
+    console.log(`Include sender account: ${includeSelf ? 'yes (experimental)' : 'no'}`);
     console.log('Sending Status request...');
 
     const result = await socket.sendMessage('status@broadcast', content, {
       broadcast: true,
-      statusJidList: recipients,
+      statusJidList: statusAudience,
       mediaUploadTimeoutMs: 180000
     });
 
     console.log('Baileys returned message ID:', result?.key?.id ?? '(none)');
-    console.log('This is not delivery confirmation. Check WhatsApp Updates and ACK logs.');
-    console.log('If Status does not appear, rerun with --trace and inspect ACK error=479.');
+    console.log('The message ID alone does not prove publication.');
+    if (includeSelf) {
+      console.log('The sender account was added to the audience; check both sender and target devices.');
+    }
+    console.log('If the Status is missing, rerun with --trace and inspect ACK errors and recipient receipts.');
   } catch (error) {
     uploadStarted = false;
     console.error('Status upload failed:', error?.message ?? error);
