@@ -1,0 +1,18 @@
+{
+  "name": "whatsapp-hd",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Android/Termux CLI for attempting WhatsApp image and video status uploads with Baileys",
+  "scripts": {
+    "start": "node index.js",
+    "check": "node --check index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "pino": "^9.6.0"
+  }
+}
