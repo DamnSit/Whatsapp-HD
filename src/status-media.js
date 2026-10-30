@@ -4,7 +4,6 @@ import { Jimp, ResizeStrategy } from "jimp";
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const VIDEO_EXTENSIONS = new Set([".mp4", ".m4v"]);
-const NATIVE_EXTENSIONS = new Set([...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS, ".3gp"]);
 
 export function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -12,10 +11,8 @@ export function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-export async function inspectMedia(inputPath, { native = false } = {}) {
-  if (!inputPath) {
-    throw new Error("--upload membutuhkan path file.");
-  }
+export async function inspectMedia(inputPath) {
+  if (!inputPath) throw new Error("--upload membutuhkan path file.");
 
   const file = path.resolve(inputPath);
   const info = await stat(file);
@@ -24,43 +21,21 @@ export async function inspectMedia(inputPath, { native = false } = {}) {
   }
 
   const extension = path.extname(file).toLowerCase();
-  const supported = native
-    ? NATIVE_EXTENSIONS.has(extension)
-    : IMAGE_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension);
-
-  if (!supported) {
-    throw new Error(
-      native
-        ? "Format yang didukung: JPG, JPEG, PNG, WebP, MP4, M4V, dan 3GP."
-        : "Format yang didukung Baileys: JPG, JPEG, PNG, WebP, MP4, dan M4V."
-    );
-  }
-
-  const kind = IMAGE_EXTENSIONS.has(extension) ? "image" : "video";
-  const mimeType = extension === ".jpg" || extension === ".jpeg"
-    ? "image/jpeg"
-    : extension === ".png"
-      ? "image/png"
-      : extension === ".webp"
-        ? "image/webp"
-        : extension === ".3gp"
-          ? "video/3gpp"
-          : "video/mp4";
+  const kind = IMAGE_EXTENSIONS.has(extension) ? "image" : VIDEO_EXTENSIONS.has(extension) ? "video" : null;
+  if (!kind) throw new Error("Format didukung: JPG, JPEG, PNG, WebP, MP4, dan M4V.");
 
   return {
     file,
     filename: path.basename(file),
     extension,
     size: info.size,
-    kind,
-    mimeType
+    kind
   };
 }
 
 export async function prepareStatusPayload(media, caption = "") {
   if (media.kind === "image") {
-    // Thumbnail is metadata only. The original file path is passed to Baileys;
-    // the source image is never resized or re-encoded for the upload itself.
+    // Preview metadata only; the original source path is uploaded unchanged.
     const image = await Jimp.read(media.file);
     const thumbnail = await image.clone()
       .resize({ w: 32, mode: ResizeStrategy.BILINEAR })
