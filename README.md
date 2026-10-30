@@ -1,6 +1,6 @@
 # WhatsApp HD
 
-A small Node.js CLI intended to run locally in Termux on Android. It uses Baileys to send image/video Status updates from local files.
+A modular Node.js CLI for Termux on Android. It uses Baileys to publish image/video Status updates from local files while preserving the source media bytes on the client.
 
 ## Requirements
 
@@ -11,6 +11,20 @@ A small Node.js CLI intended to run locally in Termux on Android. It uses Bailey
 
 No root access, VPS, or WebView is required.
 
+## Project structure
+
+- `index.js` — small CLI entry point and command routing.
+- `src/cli-options.js` — argument parsing and help text.
+- `src/whatsapp-client.js` — Baileys connection, pairing, reconnect, and lifecycle.
+- `src/status-audience.js` — Status privacy parsing, local cache, and recipient selection.
+- `src/status-media.js` — media validation and payload preparation. Original image/video files are passed to Baileys without re-encoding.
+- `src/status-publisher.js` — sender JID normalization and Status fan-out.
+- `src/native-bridge.js` — optional Android Sharesheet handoff.
+- `src/logger.js` — consistent CLI output and filtering of known sensitive Signal session dumps.
+- `test/` — unit tests for CLI parsing and audience handling.
+
+Normal logs use concise `[INFO]`, `[OK]`, `[WARN]`, and `[ERROR]` labels. `--trace` enables verbose Baileys diagnostics; trace output can contain sensitive protocol metadata and should be redacted before sharing.
+
 ## Install in Termux
 
 ```sh
@@ -20,6 +34,7 @@ git clone https://github.com/DamnSit/Whatsapp-HD.git
 cd Whatsapp-HD
 npm install
 npm run check
+npm test
 ```
 
 If npm reports that dependency install scripts are blocked, review them before approving. Baileys and protobufjs use install scripts; only approve scripts for packages you trust.
@@ -95,7 +110,7 @@ This handoff still needs end-to-end testing on the target Android/WhatsApp build
 
 ## Supported media
 
-Supported extensions: JPG, JPEG, PNG, WebP, MP4, and M4V. Jimp generates image thumbnails in pure JavaScript so image uploads do not depend on a native `sharp` build. Videos may use FFmpeg for thumbnail extraction; if FFmpeg is unavailable, Baileys can still upload the media but may omit its preview thumbnail. The script does not re-encode media, and WhatsApp may still compress uploads.
+Supported extensions for Baileys uploads: JPG, JPEG, PNG, WebP, MP4, and M4V. Jimp generates a small JPEG preview thumbnail for image metadata. The original image is still passed to Baileys using its original file path; the CLI does not resize or re-encode the upload. Videos are passed from their original file path as well. WhatsApp's server-side processing may still vary by media type and account/app version.
 
 Grant shared-storage access in Termux if needed:
 
@@ -125,12 +140,13 @@ Keep both `auth_info/` and `status-audience.json` private. The latter contains t
 - [x] Listen for Baileys `statusPrivacy` App State updates
 - [x] Persist the decoded ALLOW_LIST recipient JIDs locally
 - [x] Automatic audience mode for classic "Only share with…"
-- [x] Normalize the sender account JID before Baileys Status device fan-out (sender UI synchronization still requires device testing)
+- [x] Normalize the sender account JID before Baileys Status device fan-out
+- [x] Verify Status appears in My Status on the tested Android device
 - [x] Kotlin Android Status Bridge companion app and FileProvider handoff
 - [x] Android 14+ Sharesheet custom action and foreground proxy Activity flow
 - [x] System document-picker fallback when direct media-path access is unavailable
 - [ ] Build and verify native handoff and sender-side visibility on target Android/WhatsApp builds
 - [ ] Support newer custom audience lists and Close Friends
 - [ ] Resolve CONTACTS / DENY_LIST modes from a complete synced contact set
-- [ ] Verified sender-side Status UI synchronization across WhatsApp versions
+- [ ] Verify sender-side Status UI synchronization across additional WhatsApp/Android versions
 - [ ] Confirmed upstream fix for Baileys Status/LID edge cases
