@@ -6,7 +6,7 @@
   "description": "Termux CLI for publishing WhatsApp image/video Status updates with Baileys",
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check src/cli-options.js && node --check src/logger.js && node --check src/native-bridge.js && node --check src/status-audience.js && node --check src/status-media.js && node --check src/status-publisher.js && node --check src/whatsapp-client.js",
+    "check": "node --check index.js && for file in src/*.js; do node --check \"$file\"; done",
     "test": "node --test"
   },
   "engines": {
