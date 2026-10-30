@@ -1,5 +1,6 @@
 import makeWASocket, {
   DisconnectReason,
+  jidNormalizedUser,
   useMultiFileAuthState
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
@@ -321,19 +322,26 @@ async function uploadStatus(socket) {
       throw new Error('Supported formats: JPG, JPEG, PNG, WebP, MP4, M4V.');
     }
 
-    const senderJid = socket.user?.id;
-    if (!senderJid || typeof senderJid !== 'string') {
-      throw new Error('Baileys did not expose the connected sender JID; refusing to publish without self fan-out.');
+    const rawSenderJid = socket.user?.id;
+    const senderJid = jidNormalizedUser(rawSenderJid);
+    if (!senderJid) {
+      throw new Error('Baileys did not expose a valid sender account JID; refusing to publish without self fan-out.');
     }
 
-    // Include the account itself so the primary WhatsApp account can receive
-    // its own Status update, alongside the audience selected in WhatsApp.
-    const fanoutRecipients = [...new Set([senderJid, ...statusRecipients])];
+    // Status device fan-out must receive a user-level JID. A device-qualified
+    // JID (for example, user:device@s.whatsapp.net) is treated by Baileys as
+    // one explicit device and will not enumerate the account's other devices.
+    // Normalizing removes that device suffix so the primary phone can receive
+    // the Status alongside the selected audience.
+    const normalizedRecipients = statusRecipients
+      .map((jid) => jidNormalizedUser(jid))
+      .filter(Boolean);
+    const fanoutRecipients = [...new Set([senderJid, ...normalizedRecipients])];
 
     console.log('File: ' + file);
     console.log('Size: ' + (info.size / 1024 / 1024).toFixed(2) + ' MB');
     console.log('Status audience JIDs: ' + statusRecipients.length);
-    console.log('Sender self JID included in device fan-out: yes');
+    console.log('Sender account JID normalized for all-device fan-out: yes');
     console.log('Total statusJidList entries: ' + fanoutRecipients.length);
     console.log('WhatsApp Status Privacy is not modified by this tool.');
     console.log('Sending Status request...');
