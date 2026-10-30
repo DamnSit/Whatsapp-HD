@@ -8,6 +8,24 @@ import { stdin, stdout } from 'node:process';
 import { stat, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+// libsignal can print raw Signal SessionEntry objects directly through console.log.
+// These objects may contain ratchet/session key material, so suppress only those
+// known internal bookkeeping lines while preserving normal application output.
+const originalConsoleLog = console.log.bind(console);
+const sensitiveSignalLogPatterns = [
+  /^Closing session: SessionEntry/,
+  /^Closing stale open session for new outgoing prekey bundle/,
+  /^Closing open session in favor of incoming prekey bundle/,
+  /^Removing old closed session: SessionEntry/
+];
+console.log = (...values) => {
+  const first = values[0];
+  if (typeof first === 'string' && sensitiveSignalLogPatterns.some((pattern) => pattern.test(first))) {
+    return;
+  }
+  originalConsoleLog(...values);
+};
+
 const AUTH_DIR = process.env.WA_AUTH_DIR || './auth_info';
 const AUDIENCE_FILE = process.env.WA_AUDIENCE_FILE || './status-audience.json';
 const args = process.argv.slice(2);
