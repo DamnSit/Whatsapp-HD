@@ -1,15 +1,19 @@
-import { createInterface } from "node:readline";
+import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { parseCliOptions, usageText } from "./src/cli-options.js";
-import { log, errorMessage, installSensitiveConsoleFilter } from "./src/logger.js";
+import { installSensitiveConsoleFilter, log, errorMessage } from "./src/logger.js";
 import { launchNativeStatus } from "./src/native-bridge.js";
 import { runWhatsAppClient } from "./src/whatsapp-client.js";
+
+installSensitiveConsoleFilter();
+
+let stopClient;
 
 async function main() {
   const options = parseCliOptions(process.argv.slice(2));
 
   if (options.help) {
-    stdout.write(usageText() + "\n");
+    console.log(usageText());
     return;
   }
 
@@ -21,25 +25,23 @@ async function main() {
     return;
   }
 
-  installSensitiveConsoleFilter();
-
-  const readline = createInterface({ input: stdin, output: stdout });
-  let stopClient = () => readline.close();
-
-  process.once("SIGINT", () => {
-    log.info("Menghentikan Whatsapp-HD…");
-    stopClient();
-    process.exit(0);
-  });
+  const terminal = readline.createInterface({ input: stdin, output: stdout });
 
   try {
-    stopClient = await runWhatsAppClient({ options, readline });
+    stopClient = await runWhatsAppClient({ options, readline: terminal });
   } catch (error) {
-    log.error(errorMessage(error));
-    readline.close();
-    process.exitCode = 1;
+    terminal.close();
+    throw error;
   }
 }
+
+function shutdown() {
+  stopClient?.();
+  process.exit(0);
+}
+
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
 
 main().catch((error) => {
   log.error(errorMessage(error));
