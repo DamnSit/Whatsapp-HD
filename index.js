@@ -254,15 +254,26 @@ async function uploadStatus(socket) {
       throw new Error('Supported formats: JPG, JPEG, PNG, WebP, MP4, M4V.');
     }
 
+    const senderJid = socket.user?.id;
+    if (!senderJid || typeof senderJid !== 'string') {
+      throw new Error('Baileys did not expose the connected sender JID; refusing to publish without self fan-out.');
+    }
+
+    // Include the account itself so the primary WhatsApp account can receive
+    // its own Status update, alongside the audience selected in WhatsApp.
+    const fanoutRecipients = [...new Set([senderJid, ...statusRecipients])];
+
     console.log('File: ' + file);
     console.log('Size: ' + (info.size / 1024 / 1024).toFixed(2) + ' MB');
-    console.log('Status audience recipient JIDs: ' + statusRecipients.length);
+    console.log('Status audience JIDs: ' + statusRecipients.length);
+    console.log('Sender self JID included in device fan-out: yes');
+    console.log('Total statusJidList entries: ' + fanoutRecipients.length);
     console.log('WhatsApp Status Privacy is not modified by this tool.');
     console.log('Sending Status request...');
 
     const result = await socket.sendMessage('status@broadcast', content, {
       broadcast: true,
-      statusJidList: statusRecipients,
+      statusJidList: fanoutRecipients,
       mediaUploadTimeoutMs: 180000
     });
 
