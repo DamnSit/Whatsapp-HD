@@ -18,7 +18,8 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
-import java.io.FileInputStream\nimport java.io.FileNotFoundException
+import java.io.FileInputStream
+import java.io.FileNotFoundException
 import java.util.Locale
 
 /**
