@@ -1,8 +1,6 @@
 # WhatsApp HD
 
-A small Node.js CLI intended to run locally in Termux on Android. It uses Baileys to send image/video Status updates from local files to a selected recipient list.
-
-> **Important audience detail:** configure Status Privacy in the official WhatsApp app first (for example, "Only share with…"). Baileys additionally requires an explicit `statusJidList` to prepare encryption and device fan-out. The current Baileys API does not expose the exact contacts selected in WhatsApp's custom Status audience, so this CLI's `--to` must currently contain the same recipients. The CLI does not alter the privacy setting in WhatsApp.
+A small Node.js CLI intended to run locally in Termux on Android. It uses Baileys to send image/video Status updates from local files.
 
 ## Requirements
 
@@ -40,21 +38,35 @@ Enter the pairing code printed by Termux. Wait until the CLI reports that WhatsA
 
 Credentials are stored in `./auth_info`. Keep this directory private. Do not commit it, upload it, or share its contents.
 
-## Upload a Status to selected contacts
+## Automatic Status audience sync
+
+Baileys v7 exposes WhatsApp's `statusPrivacy` App State mutation through the `settings.update` event. Whatsapp-HD listens for that event and stores the decoded audience mode and JIDs locally in `status-audience.json`.
+
+Run a sync check:
+
+```sh
+node index.js --sync-audience
+```
+
+For the automatic path, set WhatsApp Status Privacy to **Only share with…** in the official app. Then upload without `--to`:
 
 Image:
 
 ```sh
-node index.js --upload "/storage/emulated/0/Pictures/status.jpg" --to 62812xxxxxxx
+node index.js --upload "/storage/emulated/0/Pictures/status.jpg"
 ```
 
 Video with a caption:
 
 ```sh
-node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --caption "Hello"
+node index.js --upload "/storage/emulated/0/Download/video.mp4" --caption "Hello"
 ```
 
-Use comma-separated phone numbers to supply multiple JIDs to Baileys. Before uploading, set the intended audience in the official WhatsApp app (for example, **Updates → Status Privacy → Only share with…**). The `--to` option is the transport recipient list Baileys needs for device encryption/fan-out; it does not change the privacy setting in WhatsApp. For now, you need to keep the two lists aligned manually because Baileys does not expose the exact custom audience list saved by the WhatsApp app.
+The CLI refreshes the `regular_high` App State collection when it connects. If no Status privacy record is received, edit and save the selected audience in the official WhatsApp app, run `node index.js --sync-audience` again, and check the reported mode and recipient count.
+
+**Safety limitation:** automatic recipient expansion currently supports only the classic **Only share with…** mode (`ALLOW_LIST`) when Baileys returns its `userJid` list. The current Baileys protobuf does not fully model newer custom audience lists or close-friends list structures. **My contacts**, **My contacts except…**, custom lists, and Close Friends are not guessed or expanded. In those modes the script refuses automatic upload; use `--to` only as an intentional manual override.
+
+The script does not change Status Privacy in the official app. `--to` remains available for manual recipient selection and overrides the synced list.
 
 ## Supported media
 
@@ -69,20 +81,26 @@ termux-setup-storage
 ## Diagnostics
 
 ```sh
-node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --trace
+node index.js --sync-audience
+node index.js --upload "/storage/emulated/0/Download/video.mp4" --trace
 ```
 
-Trace logs can contain sensitive protocol metadata and cryptographic session details. Review and redact logs before sharing them. Check for a server ACK with `error="479"`, recipient `receipt` events, or `type="read"` receipts. A successful `sendMessage()` return and message ID alone do not confirm publication.
+Trace logs can contain sensitive protocol metadata and cryptographic session details. Review and redact logs before sharing them. A successful `sendMessage()` return and message ID alone do not confirm publication. Check the sender UI and ask a selected recipient to confirm visibility.
 
 Do not repeatedly delete or reset `auth_info` to troubleshoot Status visibility. Session authentication and Status publication/synchronization are separate problems.
+
+Keep both `auth_info/` and `status-audience.json` private. The latter contains the recipient JIDs synced from your WhatsApp account.
 
 ## Project status
 
 - [x] Termux / Node.js CLI scaffold
 - [x] Pairing-code flow and local multi-file auth
 - [x] Local image/video path handling
-- [x] Optional caption and recipient list
-- [x] Explicit warning that a returned message ID is not delivery confirmation
-- [ ] Read and reuse the official WhatsApp app's custom Status audience automatically (not exposed by current Baileys API)
+- [x] Optional caption and manual recipient override
+- [x] Listen for Baileys `statusPrivacy` App State updates
+- [x] Persist the decoded ALLOW_LIST recipient JIDs locally
+- [x] Automatic audience mode for classic "Only share with…"
+- [ ] Support newer custom audience lists and Close Friends
+- [ ] Resolve CONTACTS / DENY_LIST modes from a complete synced contact set
 - [ ] Verified sender-side Status UI synchronization across WhatsApp versions
 - [ ] Confirmed upstream fix for Baileys Status/LID edge cases
