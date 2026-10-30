@@ -126,8 +126,10 @@ Keep both `auth_info/` and `status-audience.json` private. The latter contains t
 - [x] Persist the decoded ALLOW_LIST recipient JIDs locally
 - [x] Automatic audience mode for classic "Only share with…"
 - [x] Include the sender's own JID in Baileys Status device fan-out (does not guarantee sender UI synchronization)
-- [x] Experimental Meta Share-to-WhatsApp-Status native handoff mode
-- [ ] Verify native handoff and sender-side visibility on target Android/WhatsApp builds
+- [x] Kotlin Android Status Bridge companion app and FileProvider handoff
+- [x] Android 14+ Sharesheet custom action and foreground proxy Activity flow
+- [x] System document-picker fallback when direct media-path access is unavailable
+- [ ] Build and verify native handoff and sender-side visibility on target Android/WhatsApp builds
 - [ ] Support newer custom audience lists and Close Friends
 - [ ] Resolve CONTACTS / DENY_LIST modes from a complete synced contact set
 - [ ] Verified sender-side Status UI synchronization across WhatsApp versions
