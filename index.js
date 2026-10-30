@@ -2,7 +2,6 @@ import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { parseCliOptions, usageText } from "./src/cli-options.js";
 import { installSensitiveConsoleFilter, log, errorMessage } from "./src/logger.js";
-import { launchNativeStatus } from "./src/native-bridge.js";
 import { runWhatsAppClient } from "./src/whatsapp-client.js";
 
 installSensitiveConsoleFilter();
@@ -14,14 +13,6 @@ async function main() {
 
   if (options.help) {
     console.log(usageText());
-    return;
-  }
-
-  if (options.nativeStatusOnly) {
-    await launchNativeStatus({
-      uploadPath: options.uploadPath,
-      caption: options.caption
-    });
     return;
   }
 
