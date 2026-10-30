@@ -66,11 +66,11 @@ The CLI refreshes the `regular_high` App State collection when it connects. If n
 
 **Safety limitation:** automatic recipient expansion currently supports only the classic **Only share with…** mode (`ALLOW_LIST`) when Baileys returns its `userJid` list. The current Baileys protobuf does not fully model newer custom audience lists or close-friends list structures. **My contacts**, **My contacts except…**, custom lists, and Close Friends are not guessed or expanded. In those modes the script refuses automatic upload; use `--to` only as an intentional manual override.
 
-The script does not change Status Privacy in the official app. The connected sender JID (`sock.user.id`) is also prepended to Baileys' `statusJidList` so the sender account can receive its own Status. `--to` remains available for manual recipient selection and overrides the synced audience list (the sender is still included separately).
+The script does not change Status Privacy in the official app. The sender account JID is normalized with Baileys' `jidNormalizedUser` before it is prepended to `statusJidList`. This matters because Baileys treats a device-qualified JID as one explicit device; the normalized user JID lets Baileys enumerate the account's linked devices for Status fan-out. This improves the chance that the primary phone receives the sender's own Status, but does not guarantee that every WhatsApp version will show it in **My Status**. `--to` remains available for manual recipient selection and overrides the synced audience list (the sender account is still included separately).
 
-## Native WhatsApp Status bridge (recommended for sender-side visibility)
+## Native WhatsApp Status bridge (optional manual fallback)
 
-Baileys can send a Status broadcast to selected recipients, but a successful Baileys send does not guarantee that the post is synchronized into **My Status** in the official WhatsApp app.
+This route hands the media to WhatsApp's native Sharesheet/editor. In the device test for this project, the resulting Status looked more compressed than the Baileys upload. Prefer the Baileys CLI route when preserving the clearer result is the priority; use this bridge when you specifically need the native WhatsApp editor and are willing to accept its processing.
 
 For a native handoff, install the **Whatsapp-HD Status Bridge** APK before using this command:
 
@@ -125,7 +125,7 @@ Keep both `auth_info/` and `status-audience.json` private. The latter contains t
 - [x] Listen for Baileys `statusPrivacy` App State updates
 - [x] Persist the decoded ALLOW_LIST recipient JIDs locally
 - [x] Automatic audience mode for classic "Only share with…"
-- [x] Include the sender's own JID in Baileys Status device fan-out (does not guarantee sender UI synchronization)
+- [x] Normalize the sender account JID before Baileys Status device fan-out (sender UI synchronization still requires device testing)
 - [x] Kotlin Android Status Bridge companion app and FileProvider handoff
 - [x] Android 14+ Sharesheet custom action and foreground proxy Activity flow
 - [x] System document-picker fallback when direct media-path access is unavailable
