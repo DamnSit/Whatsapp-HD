@@ -11,7 +11,6 @@ import path from 'node:path';
 const AUTH_DIR = process.env.WA_AUTH_DIR || './auth_info';
 const args = process.argv.slice(2);
 const verbose = args.includes('--trace');
-const includeSelf = args.includes('--include-self') || !args.includes('--no-include-self');
 const getOption = (name) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
@@ -49,23 +48,6 @@ function normalizeNumber(input) {
   return number;
 }
 
-function buildStatusAudience(socket) {
-  const audience = [...recipients];
-
-  if (includeSelf) {
-    // Keep the sender in PN format, like the explicit recipients. Do not mix PN and LID
-    // addressing in the same statusJidList; Baileys 7.0.0-rc14 has known LID edge cases.
-    const ownJid = socket.user?.id || '';
-    const ownNumber = ownJid.split('@')[0].split(':')[0].replace(/\D/g, '');
-    if (!/^\d{8,15}$/.test(ownNumber)) {
-      throw new Error('Could not resolve your own phone-number JID. Reconnect and retry with --no-include-self.');
-    }
-    audience.push(`${ownNumber}@s.whatsapp.net`);
-  }
-
-  return [...new Set(audience)];
-}
-
 function usage() {
   console.log(`
 WhatsApp HD — local Termux CLI
@@ -79,23 +61,20 @@ Upload an image:
 Upload a video with caption:
   node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx,62813xxxxxxx --caption "Hello"
 
-Sender visibility workaround is enabled by default. Disable it only if needed:
-  node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --no-include-self
-
 Options:
   --upload PATH    Image/video file to send as a Status
-  --to NUMBERS     Comma-separated recipient numbers in international format
+  --to NUMBERS     Recipients needed by Baileys for Status device fan-out
   --caption TEXT   Optional caption
-  --include-self      Explicitly enable adding your own account to the Status audience (default)\n  --no-include-self   Disable adding your own account to the Status audience
   --trace          Verbose Baileys protocol logs (may include sensitive metadata)
   --help           Show this help
 
 Notes:
+  - Set your audience in WhatsApp Status Privacy first (for example, "Only share with").
+  - Baileys also requires those same recipient JIDs in statusJidList for encryption and fan-out.
+    The current Baileys API does not expose the exact contacts selected in WhatsApp's custom audience.
+  - --to does not change your WhatsApp privacy settings; it supplies the transport recipient list.
   - Keep auth_info private; it contains login credentials.
   - This tool does not re-encode media. WhatsApp may still compress uploads.
-  - The sender account is included in the audience by default as an experimental visibility workaround.
-    --no-include-self disables this. It may help linked devices receive the Status, but cannot guarantee
-    that the primary WhatsApp app displays it under "My Status".
   - A returned message ID is not proof that a Status was published. Check the trace ACK and
     recipient receipts; do not assume sendMessage() success means upload success.
 `);
@@ -104,8 +83,8 @@ Notes:
 async function uploadStatus(socket) {
   if (!uploadPath || uploadStarted) return;
   if (recipients.length === 0) {
-    console.error('Upload not started: pass --to with one or more recipient phone numbers.');
-    console.error('Example: --to 62812xxxxxxx');
+    console.error('Upload not started: Baileys needs --to so it can build the Status recipient device list.');
+    console.error('Use the same contacts selected in WhatsApp Status Privacy. Example: --to 62812xxxxxxx');
     return;
   }
 
@@ -125,26 +104,20 @@ async function uploadStatus(socket) {
       throw new Error('Supported formats: JPG, JPEG, PNG, WebP, MP4, M4V.');
     }
 
-    const statusAudience = buildStatusAudience(socket);
-
     console.log(`File: ${file}`);
     console.log(`Size: ${(info.size / 1024 / 1024).toFixed(2)} MB`);
-    console.log(`Explicit contacts selected: ${recipients.length}`);
-    console.log(`Status audience entries: ${statusAudience.length}`);
-    console.log(`Include sender account: ${includeSelf ? 'yes (experimental default)' : 'no'}`);
+    console.log(`Baileys recipient JIDs supplied: ${recipients.length}`);
+    console.log('WhatsApp Status Privacy is not modified by this tool.');
     console.log('Sending Status request...');
 
     const result = await socket.sendMessage('status@broadcast', content, {
       broadcast: true,
-      statusJidList: statusAudience,
+      statusJidList: recipients,
       mediaUploadTimeoutMs: 180000
     });
 
     console.log('Baileys returned message ID:', result?.key?.id ?? '(none)');
     console.log('The message ID alone does not prove publication.');
-    if (includeSelf) {
-      console.log('The sender account was added to the audience; check both sender and target devices.');
-    }
     console.log('If the Status is missing, rerun with --trace and inspect ACK errors and recipient receipts.');
   } catch (error) {
     uploadStarted = false;
