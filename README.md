@@ -66,7 +66,7 @@ The CLI refreshes the `regular_high` App State collection when it connects. If n
 
 **Safety limitation:** automatic recipient expansion currently supports only the classic **Only share with…** mode (`ALLOW_LIST`) when Baileys returns its `userJid` list. The current Baileys protobuf does not fully model newer custom audience lists or close-friends list structures. **My contacts**, **My contacts except…**, custom lists, and Close Friends are not guessed or expanded. In those modes the script refuses automatic upload; use `--to` only as an intentional manual override.
 
-The script does not change Status Privacy in the official app. `--to` remains available for manual recipient selection and overrides the synced list.
+The script does not change Status Privacy in the official app. The connected sender JID (`sock.user.id`) is also prepended to Baileys' `statusJidList` so the sender account can receive its own Status. `--to` remains available for manual recipient selection and overrides the synced audience list (the sender is still included separately).
 
 ## Supported media
 
@@ -100,6 +100,7 @@ Keep both `auth_info/` and `status-audience.json` private. The latter contains t
 - [x] Listen for Baileys `statusPrivacy` App State updates
 - [x] Persist the decoded ALLOW_LIST recipient JIDs locally
 - [x] Automatic audience mode for classic "Only share with…"
+- [x] Include the sender's own JID in Status device fan-out
 - [ ] Support newer custom audience lists and Close Friends
 - [ ] Resolve CONTACTS / DENY_LIST modes from a complete synced contact set
 - [ ] Verified sender-side Status UI synchronization across WhatsApp versions
