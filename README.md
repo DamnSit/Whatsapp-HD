@@ -68,6 +68,28 @@ The CLI refreshes the `regular_high` App State collection when it connects. If n
 
 The script does not change Status Privacy in the official app. The connected sender JID (`sock.user.id`) is also prepended to Baileys' `statusJidList` so the sender account can receive its own Status. `--to` remains available for manual recipient selection and overrides the synced audience list (the sender is still included separately).
 
+## Native WhatsApp Status mode (recommended for sender-side visibility)
+
+Baileys can send a Status broadcast to the selected recipients, but a successful Baileys send does not guarantee that the post is synchronized into **My Status** in the official WhatsApp app. The repository has reports of this same sender-side visibility problem.
+
+For a native handoff, use Meta's Android **Share to WhatsApp Status** integration:
+
+```sh
+node index.js --native-status --upload "/storage/emulated/0/Download/status.jpg"
+```
+
+This mode does not connect through Baileys. It resolves the media file through Android MediaStore and opens WhatsApp's official Status editor using the `https://wa.me/status` deep link and `SHARE_TO_STATUS` intent. Review the preview and audience inside WhatsApp, then tap **Send** yourself. WhatsApp's current Status Privacy setting remains authoritative; this tool does not change it.
+
+Grant Termux shared-storage/media access first if needed:
+
+```sh
+termux-setup-storage
+```
+
+The media must be indexed by Android MediaStore. If it is not found, open the file once in Gallery or select it from WhatsApp's own media picker. The CLI caption is not prefilled in this native mode; add it in the WhatsApp editor.
+
+This native handoff is experimental until verified on the target Android/WhatsApp build. Keep the existing Baileys `--upload` mode available for comparison.
+
 ## Supported media
 
 Supported extensions: JPG, JPEG, PNG, WebP, MP4, and M4V. Jimp generates image thumbnails in pure JavaScript so image uploads do not depend on a native `sharp` build. Videos may use FFmpeg for thumbnail extraction; if FFmpeg is unavailable, Baileys can still upload the media but may omit its preview thumbnail. The script does not re-encode media, and WhatsApp may still compress uploads.
@@ -100,7 +122,9 @@ Keep both `auth_info/` and `status-audience.json` private. The latter contains t
 - [x] Listen for Baileys `statusPrivacy` App State updates
 - [x] Persist the decoded ALLOW_LIST recipient JIDs locally
 - [x] Automatic audience mode for classic "Only share with…"
-- [x] Include the sender's own JID in Status device fan-out
+- [x] Include the sender's own JID in Baileys Status device fan-out (does not guarantee sender UI synchronization)
+- [x] Experimental Meta Share-to-WhatsApp-Status native handoff mode
+- [ ] Verify native handoff and sender-side visibility on target Android/WhatsApp builds
 - [ ] Support newer custom audience lists and Close Friends
 - [ ] Resolve CONTACTS / DENY_LIST modes from a complete synced contact set
 - [ ] Verified sender-side Status UI synchronization across WhatsApp versions
