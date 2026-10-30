@@ -8,6 +8,10 @@ import { stdin, stdout } from 'node:process';
 import { stat, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Jimp, ResizeStrategy } from 'jimp';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 // libsignal writes Signal session objects straight to console methods.
 // Suppress only known sensitive session dumps; they can include private ratchet keys.
@@ -39,6 +43,7 @@ const AUDIENCE_FILE = process.env.WA_AUDIENCE_FILE || './status-audience.json';
 const args = process.argv.slice(2);
 const verbose = args.includes('--trace');
 const syncAudienceOnly = args.includes('--sync-audience');
+const nativeStatusOnly = args.includes('--native-status');
 const getOption = (name) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
@@ -172,6 +177,78 @@ function resolveStatusRecipients() {
   return statusPrivacy.userJid;
 }
 
+async function openNativeStatus() {
+  if (!uploadPath) {
+    throw new Error('--native-status requires --upload PATH.');
+  }
+
+  const file = path.resolve(uploadPath);
+  const info = await stat(file);
+  if (!info.isFile() || info.size === 0) {
+    throw new Error('File is empty or not a regular file.');
+  }
+
+  const ext = path.extname(file).toLowerCase();
+  const collection = ['.mp4', '.m4v', '.3gp'].includes(ext)
+    ? 'video'
+    : ['.jpg', '.jpeg', '.png', '.webp'].includes(ext)
+      ? 'images'
+      : null;
+
+  if (!collection) {
+    throw new Error('Supported native Status formats: JPG, JPEG, PNG, WebP, MP4, M4V, 3GP.');
+  }
+
+  // Meta's official Share to Status integration requires a content:// URI.
+  // Resolve the existing shared-storage file through Android MediaStore.
+  const collectionUri = `content://media/external/${collection}/media`;
+  const escapedPath = file.replace(/'/g, "''");
+  let queryResult;
+  try {
+    queryResult = await execFileAsync('/system/bin/content', [
+      'query',
+      '--uri', collectionUri,
+      '--projection', '_id:_data:_display_name',
+      '--where', `_data='${escapedPath}'`
+    ], { timeout: 20000 });
+  } catch (error) {
+    throw new Error(
+      'Could not query Android MediaStore. Grant Termux media/storage access with termux-setup-storage, ' +
+      'then retry. Android said: ' + (error?.stderr || error?.message || error)
+    );
+  }
+
+  const mediaId = queryResult.stdout.match(/(?:^|[,\\s])_id=(\\d+)/)?.[1];
+  if (!mediaId) {
+    throw new Error(
+      'This file is not indexed in Android MediaStore, so WhatsApp cannot receive a safe content URI. ' +
+      'Open it once in Gallery or use WhatsApp’s own media picker, then retry.'
+    );
+  }
+
+  const mediaUri = `${collectionUri}/${mediaId}`;
+  const intentArgs = [
+    'start', '-W',
+    '-a', 'android.intent.action.VIEW',
+    '-d', 'https://wa.me/status',
+    '-p', 'com.whatsapp',
+    '--es', 'share_type', 'SHARE_TO_STATUS',
+    '--es', 'source_app_package_name', 'com.termux',
+    '--eu', 'android.intent.extra.STREAM', mediaUri,
+    '-f', '0x00000001'
+  ];
+
+  const launch = await execFileAsync('/system/bin/am', intentArgs, { timeout: 30000 });
+  console.log('Official WhatsApp Status editor opened.');
+  console.log('Media: ' + path.basename(file));
+  console.log('Review the media and audience in WhatsApp, then tap Send.');
+  if (caption) {
+    console.log('Caption was not prefilled; add it in the WhatsApp editor if needed.');
+  }
+  if (launch.stdout?.trim()) console.log(launch.stdout.trim());
+  if (launch.stderr?.trim()) console.warn(launch.stderr.trim());
+}
+
 function usage() {
   console.log([
     '',
@@ -194,6 +271,7 @@ function usage() {
     '  --to NUMBERS     Optional manual recipient override (comma-separated)',
     '  --caption TEXT   Optional caption',
     '  --sync-audience  Sync Status privacy App State and exit',
+    '  --native-status  Open the official WhatsApp Status editor for --upload media',
     '  --trace          Verbose Baileys protocol logs (may include sensitive metadata)',
     '  --help           Show this help',
     '',
@@ -392,8 +470,15 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-await loadStatusAudience();
-start().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (nativeStatusOnly) {
+  openNativeStatus().catch((error) => {
+    console.error('Native Status handoff failed:', error?.message ?? error);
+    process.exitCode = 1;
+  }).finally(() => rl.close());
+} else {
+  await loadStatusAudience();
+  start().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
