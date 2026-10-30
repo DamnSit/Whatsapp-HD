@@ -5,3 +5,6 @@ upload.log
 *.log
 .env
 status-audience.json
+android-helper/.gradle/
+android-helper/local.properties
+android-helper/**/build/
