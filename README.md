@@ -68,27 +68,30 @@ The CLI refreshes the `regular_high` App State collection when it connects. If n
 
 The script does not change Status Privacy in the official app. The connected sender JID (`sock.user.id`) is also prepended to Baileys' `statusJidList` so the sender account can receive its own Status. `--to` remains available for manual recipient selection and overrides the synced audience list (the sender is still included separately).
 
-## Native WhatsApp Status mode (recommended for sender-side visibility)
+## Native WhatsApp Status bridge (recommended for sender-side visibility)
 
-Baileys can send a Status broadcast to the selected recipients, but a successful Baileys send does not guarantee that the post is synchronized into **My Status** in the official WhatsApp app. The repository has reports of this same sender-side visibility problem.
+Baileys can send a Status broadcast to selected recipients, but a successful Baileys send does not guarantee that the post is synchronized into **My Status** in the official WhatsApp app.
 
-For a native handoff, use Meta's Android **Share to WhatsApp Status** integration:
+For a native handoff, install the **Whatsapp-HD Status Bridge** APK before using this command:
+
+1. Open this repository's **Actions** tab on GitHub.
+2. Open the latest successful **Build Status Bridge** workflow run.
+3. Download the `whatsapp-hd-status-bridge-debug` artifact and install the APK inside it.
+4. In Termux, run `termux-setup-storage` and allow the bridge to access the requested photos/videos when Android asks.
+
+Then run:
 
 ```sh
 node index.js --native-status --upload "/storage/emulated/0/Download/status.jpg"
 ```
 
-This mode does not connect through Baileys. It resolves the media file through Android MediaStore and opens WhatsApp's official Status editor using the `https://wa.me/status` deep link and `SHARE_TO_STATUS` intent. Review the preview and audience inside WhatsApp, then tap **Send** yourself. WhatsApp's current Status Privacy setting remains authoritative; this tool does not change it.
+The CLI launches the installed Android helper. The helper copies the selected media into its private cache, exposes it through an Android `FileProvider` URI, and uses the Android 14+ Sharesheet custom-action/proxy Activity flow for WhatsApp's **Share to Status** integration. On older Android versions it launches the same WhatsApp Status intent directly for result.
 
-Grant Termux shared-storage/media access first if needed:
+If Android does not grant access to the supplied path, the helper opens the system document picker so you can select the media manually. Review the preview and audience in WhatsApp, then tap **Send** yourself. WhatsApp's current Status Privacy setting remains authoritative; this tool does not change it or silently publish posts.
 
-```sh
-termux-setup-storage
-```
+The native bridge is separate from the Node.js CLI and must be installed once. Its APK is built by GitHub Actions from `android-helper/`. The native bridge does not prefill `--caption`; add a caption in the WhatsApp editor.
 
-The media must be indexed by Android MediaStore. If it is not found, open the file once in Gallery or select it from WhatsApp's own media picker. The CLI caption is not prefilled in this native mode; add it in the WhatsApp editor.
-
-This native handoff is experimental until verified on the target Android/WhatsApp build. Keep the existing Baileys `--upload` mode available for comparison.
+This handoff still needs end-to-end testing on the target Android/WhatsApp build. A successful handoff does not by itself prove that a Status was published or visible to recipients.
 
 ## Supported media
 
