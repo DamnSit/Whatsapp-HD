@@ -7,24 +7,32 @@ import readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { stat, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { Jimp, ResizeStrategy } from 'jimp';
 
-// libsignal can print raw Signal SessionEntry objects directly through console.log.
-// These objects may contain ratchet/session key material, so suppress only those
-// known internal bookkeeping lines while preserving normal application output.
-const originalConsoleLog = console.log.bind(console);
-const sensitiveSignalLogPatterns = [
-  /^Closing session: SessionEntry/,
-  /^Closing stale open session for new outgoing prekey bundle/,
-  /^Closing open session in favor of incoming prekey bundle/,
-  /^Removing old closed session: SessionEntry/
+// libsignal writes Signal session objects straight to console methods.
+// Suppress only known sensitive session dumps; they can include private ratchet keys.
+const sensitiveSignalPrefixes = [
+  'Closing session:',
+  'Closing stale open session',
+  'Closing open session',
+  'Removing old closed session:',
+  'Opening session:'
 ];
-console.log = (...values) => {
-  const first = values[0];
-  if (typeof first === 'string' && sensitiveSignalLogPatterns.some((pattern) => pattern.test(first))) {
-    return;
+const isSensitiveSignalLog = (values) => values.some((value) => {
+  if (typeof value === 'string') {
+    return sensitiveSignalPrefixes.some((prefix) => value.startsWith(prefix));
   }
-  originalConsoleLog(...values);
-};
+  return value !== null &&
+    typeof value === 'object' &&
+    value.constructor?.name === 'SessionEntry';
+});
+for (const level of ['log', 'info', 'warn', 'error', 'debug']) {
+  const original = console[level].bind(console);
+  console[level] = (...values) => {
+    if (isSensitiveSignalLog(values)) return;
+    original(...values);
+  };
+}
 
 const AUTH_DIR = process.env.WA_AUTH_DIR || './auth_info';
 const AUDIENCE_FILE = process.env.WA_AUDIENCE_FILE || './status-audience.json';
@@ -247,7 +255,19 @@ async function uploadStatus(socket) {
     const ext = path.extname(file).toLowerCase();
     let content;
     if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
-      content = { image: { url: file }, ...(caption ? { caption } : {}) };
+      // Supply the JPEG thumbnail ourselves. This avoids Baileys' optional
+      // thumbnail-library lookup, which is unavailable in a fresh Termux install.
+      const image = await Jimp.read(file);
+      const thumbnail = await image.clone()
+        .resize({ w: 32, mode: ResizeStrategy.BILINEAR })
+        .getBuffer('image/jpeg', { quality: 50 });
+      content = {
+        image: { url: file },
+        jpegThumbnail: thumbnail.toString('base64'),
+        width: image.width,
+        height: image.height,
+        ...(caption ? { caption } : {})
+      };
     } else if (['.mp4', '.m4v'].includes(ext)) {
       content = { video: { url: file }, mimetype: 'video/mp4', ...(caption ? { caption } : {}) };
     } else {
