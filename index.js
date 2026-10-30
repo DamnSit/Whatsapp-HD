@@ -218,7 +218,7 @@ async function openNativeStatus() {
     );
   }
 
-  const mediaId = queryResult.stdout.match(/(?:^|[,\\s])_id=(\\d+)/)?.[1];
+  const mediaId = queryResult.stdout.match(/(?:^|[,\s])_id=(\d+)/)?.[1];
   if (!mediaId) {
     throw new Error(
       'This file is not indexed in Android MediaStore, so WhatsApp cannot receive a safe content URI. ' +
