@@ -193,15 +193,20 @@ async function openNativeStatus() {
     throw new Error('Supported native Status formats: JPG, JPEG, PNG, WebP, MP4, M4V, 3GP.');
   }
 
-  // The Android bridge owns FileProvider URI creation and the Android 14+
-  // chooser/proxy Activity flow required by WhatsApp's Status integration.
-  const intentArgs = [
-    'start', '-W',
-    '-n', 'com.damnsit.whatsapphd.bridge/.MainActivity',
-    '--es', 'media_path', file
-  ];
+  // Use Termux's termux-open integration to launch our exported deep link.
+  // Calling /system/bin/am directly from an app UID can fail on Android 15+
+  // because ActivityManager rejects the forged com.android.shell package identity.
+  const bridgeUri = 'whatsapp-hd://status?' + new URLSearchParams({ media_path: file }).toString();
 
-  const launch = await execFileAsync('/system/bin/am', intentArgs, { timeout: 30000 });
+  let launch;
+  try {
+    launch = await execFileAsync('termux-open', [bridgeUri], { timeout: 30000 });
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      throw new Error('termux-open is unavailable. Update termux-tools in Termux, then retry: pkg install termux-tools');
+    }
+    throw error;
+  }
   console.log('Whatsapp-HD Status Bridge launched.');
   console.log('File: ' + path.basename(file));
   console.log('Size: ' + (info.size / 1024 / 1024).toFixed(2) + ' MB');
