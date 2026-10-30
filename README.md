@@ -2,7 +2,7 @@
 
 A small Node.js CLI intended to run locally in Termux on Android. It uses Baileys to send image/video Status updates from local files to a selected recipient list.
 
-> **Important limitation:** a Status can be visible to selected contacts without appearing under "My Status" on the sender's primary WhatsApp app. This symptom has also been reported by users of other Baileys-based tools ([Evolution API issue #2528](https://github.com/evolution-foundation/evolution-api/issues/2528)); the report does not establish a confirmed fix. This project now adds the sender's own phone-number JID to the Status audience by default as an experimental workaround. It is not guaranteed to synchronize the primary app's Status UI. Use `--no-include-self` to disable the workaround.
+> **Important audience detail:** configure Status Privacy in the official WhatsApp app first (for example, "Only share with…"). Baileys additionally requires an explicit `statusJidList` to prepare encryption and device fan-out. The current Baileys API does not expose the exact contacts selected in WhatsApp's custom Status audience, so this CLI's `--to` must currently contain the same recipients. The CLI does not alter the privacy setting in WhatsApp.
 
 ## Requirements
 
@@ -54,17 +54,7 @@ Video with a caption:
 node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --caption "Hello"
 ```
 
-Use comma-separated phone numbers to target more than one contact. The script does not set WhatsApp's account-level Status privacy settings; make sure those settings allow the intended contacts to view your Status.
-
-## Experimental workaround for sender visibility
-
-The sender's own phone-number JID is now included in the Status audience by default, in addition to the explicitly selected contacts:
-
-```sh
-node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx --caption "Hello"
-```
-
-This does not add any other external contacts. The workaround is experimental: verify the result on both phones. Do not assume it worked merely because an ID was returned. If it causes a send error or you want the previous audience behavior, disable it with `--no-include-self`.
+Use comma-separated phone numbers to supply multiple JIDs to Baileys. Before uploading, set the intended audience in the official WhatsApp app (for example, **Updates → Status Privacy → Only share with…**). The `--to` option is the transport recipient list Baileys needs for device encryption/fan-out; it does not change the privacy setting in WhatsApp. For now, you need to keep the two lists aligned manually because Baileys does not expose the exact custom audience list saved by the WhatsApp app.
 
 ## Supported media
 
@@ -93,6 +83,6 @@ Do not repeatedly delete or reset `auth_info` to troubleshoot Status visibility.
 - [x] Local image/video path handling
 - [x] Optional caption and recipient list
 - [x] Explicit warning that a returned message ID is not delivery confirmation
-- [x] Experimental sender-account audience workaround enabled by default; can be disabled with `--no-include-self`
+- [ ] Read and reuse the official WhatsApp app's custom Status audience automatically (not exposed by current Baileys API)
 - [ ] Verified sender-side Status UI synchronization across WhatsApp versions
 - [ ] Confirmed upstream fix for Baileys Status/LID edge cases
