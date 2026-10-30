@@ -189,61 +189,25 @@ async function openNativeStatus() {
   }
 
   const ext = path.extname(file).toLowerCase();
-  const collection = ['.mp4', '.m4v', '.3gp'].includes(ext)
-    ? 'video'
-    : ['.jpg', '.jpeg', '.png', '.webp'].includes(ext)
-      ? 'images'
-      : null;
-
-  if (!collection) {
+  if (!['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.m4v', '.3gp'].includes(ext)) {
     throw new Error('Supported native Status formats: JPG, JPEG, PNG, WebP, MP4, M4V, 3GP.');
   }
 
-  // Meta's official Share to Status integration requires a content:// URI.
-  // Resolve the existing shared-storage file through Android MediaStore.
-  const collectionUri = `content://media/external/${collection}/media`;
-  const escapedPath = file.replace(/'/g, "''");
-  let queryResult;
-  try {
-    queryResult = await execFileAsync('/system/bin/content', [
-      'query',
-      '--uri', collectionUri,
-      '--projection', '_id:_data:_display_name',
-      '--where', `_data='${escapedPath}'`
-    ], { timeout: 20000 });
-  } catch (error) {
-    throw new Error(
-      'Could not query Android MediaStore. Grant Termux media/storage access with termux-setup-storage, ' +
-      'then retry. Android said: ' + (error?.stderr || error?.message || error)
-    );
-  }
-
-  const mediaId = queryResult.stdout.match(/(?:^|[,\s])_id=(\d+)/)?.[1];
-  if (!mediaId) {
-    throw new Error(
-      'This file is not indexed in Android MediaStore, so WhatsApp cannot receive a safe content URI. ' +
-      'Open it once in Gallery or use WhatsApp’s own media picker, then retry.'
-    );
-  }
-
-  const mediaUri = `${collectionUri}/${mediaId}`;
+  // The Android bridge owns FileProvider URI creation and the Android 14+
+  // chooser/proxy Activity flow required by WhatsApp's Status integration.
   const intentArgs = [
     'start', '-W',
-    '-a', 'android.intent.action.VIEW',
-    '-d', 'https://wa.me/status',
-    '-p', 'com.whatsapp',
-    '--es', 'share_type', 'SHARE_TO_STATUS',
-    '--es', 'source_app_package_name', 'com.termux',
-    '--eu', 'android.intent.extra.STREAM', mediaUri,
-    '-f', '0x00000001'
+    '-n', 'com.damnsit.whatsapphd.bridge/.MainActivity',
+    '--es', 'media_path', file
   ];
 
   const launch = await execFileAsync('/system/bin/am', intentArgs, { timeout: 30000 });
-  console.log('Official WhatsApp Status editor opened.');
-  console.log('Media: ' + path.basename(file));
-  console.log('Review the media and audience in WhatsApp, then tap Send.');
+  console.log('Whatsapp-HD Status Bridge launched.');
+  console.log('File: ' + path.basename(file));
+  console.log('Size: ' + (info.size / 1024 / 1024).toFixed(2) + ' MB');
+  console.log('Review the preview and audience in WhatsApp, then tap Send.');
   if (caption) {
-    console.log('Caption was not prefilled; add it in the WhatsApp editor if needed.');
+    console.log('Caption is not prefilled by the native bridge; add it in the WhatsApp editor.');
   }
   if (launch.stdout?.trim()) console.log(launch.stdout.trim());
   if (launch.stderr?.trim()) console.warn(launch.stderr.trim());
@@ -271,7 +235,7 @@ function usage() {
     '  --to NUMBERS     Optional manual recipient override (comma-separated)',
     '  --caption TEXT   Optional caption',
     '  --sync-audience  Sync Status privacy App State and exit',
-    '  --native-status  Open the official WhatsApp Status editor for --upload media',
+    '  --native-status  Launch the Android Status Bridge for --upload media',
     '  --trace          Verbose Baileys protocol logs (may include sensitive metadata)',
     '  --help           Show this help',
     '',
@@ -281,7 +245,7 @@ function usage() {
     '  - Other audience modes and newer custom/close-friends lists are not guessed or expanded.',
     '  - --to overrides the synced audience and should be used only when you intend to do so.',
     '  - Keep auth_info and status-audience.json private; both contain account-related data.',
-    '  - A returned message ID is not proof that a Status was published.'
+    '  - --native-status requires the Whatsapp-HD Status Bridge APK to be installed.\n  - A returned message ID is not proof that a Status was published.'
   ].join('\n'));
 }
 
