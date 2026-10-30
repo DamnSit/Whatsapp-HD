@@ -14,7 +14,14 @@
   },
   "dependencies": {
     "@whiskeysockets/baileys": "7.0.0-rc14",
-    "pino": "^9.6.0",
-    "jimp": "^1.6.1"
+    "jimp": "^1.6.1",
+    "pino": "^9.6.0"
+  },
+  "allowScripts": {
+    "@whiskeysockets/baileys@7.0.0-rc14": true,
+    "protobufjs@7.6.6": true
+  },
+  "overrides": {
+    "zod": "^4.6.7"
   }
 }
