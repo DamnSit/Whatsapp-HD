@@ -44,6 +44,7 @@ class MainActivity : Activity() {
 
     private fun handleLaunchIntent(source: Intent?) {
         val path = source?.getStringExtra(EXTRA_MEDIA_PATH)
+            ?: source?.data?.getQueryParameter(EXTRA_MEDIA_PATH)
         if (path.isNullOrBlank()) {
             showMessage("Launch from Termux with --native-status --upload PATH.")
             return
