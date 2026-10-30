@@ -1,6 +1,6 @@
 # WhatsApp HD
 
-A modular Node.js CLI for Termux on Android. It uses Baileys to publish image/video Status updates from local files while preserving the source media bytes on the client.
+A modular Node.js CLI for Termux on Android. It uses Baileys to publish image/video Status updates from local files. The Android Sharesheet bridge has been retired; Baileys is the sole publishing path.
 
 ## CLI architecture
 
@@ -12,7 +12,6 @@ The Termux CLI is split into small modules so upload behavior and diagnostics ca
 - `src/status-audience.js`: Status privacy cache and recipient resolution
 - `src/status-media.js`: source-file validation and thumbnail metadata
 - `src/status-publisher.js`: Status fan-out and publish request
-- `src/native-bridge.js`: optional Android Sharesheet handoff
 - `src/logger.js`: consistent CLI output and sensitive console-log filtering
 
 The Baileys publishing path intentionally keeps the original image/video file as the upload source. The generated 32 px JPEG is only the `jpegThumbnail` message preview; it is not used as the uploaded image. Sender JID normalization before `statusJidList` is preserved because it was part of the successful sender-side visibility fix.
@@ -32,17 +31,15 @@ No root access, VPS, or WebView is required.
 
 ## Project structure
 
-- `index.js` — small CLI entry point and command routing.
+- `index.js` — CLI entry point and signal handling.
 - `src/cli-options.js` — argument parsing and help text.
 - `src/whatsapp-client.js` — Baileys connection, pairing, reconnect, and lifecycle.
 - `src/status-audience.js` — Status privacy parsing, local cache, and recipient selection.
 - `src/status-media.js` — media validation and payload preparation. Original image/video files are passed to Baileys without re-encoding.
 - `src/status-publisher.js` — sender JID normalization and Status fan-out.
-- `src/native-bridge.js` — optional Android Sharesheet handoff.
 - `src/logger.js` — consistent CLI output and filtering of known sensitive Signal session dumps.
-- `test/` — unit tests for CLI parsing and audience handling.
 
-Normal logs use concise `[INFO]`, `[OK]`, `[WARN]`, and `[ERROR]` labels. `--trace` enables verbose Baileys diagnostics; trace output can contain sensitive protocol metadata and should be redacted before sharing.
+Normal logs use concise `[INFO]`, `[SUCCESS]`, `[WARN]`, and `[ERROR]` labels. `--trace` enables verbose Baileys diagnostics; trace output can contain sensitive protocol metadata and should be redacted before sharing.
 
 ## Install in Termux
 
@@ -102,31 +99,6 @@ The CLI refreshes the `regular_high` App State collection when it connects. If n
 
 The script does not change Status Privacy in the official app. The sender account JID is normalized with Baileys' `jidNormalizedUser` before it is prepended to `statusJidList`. This matters because Baileys treats a device-qualified JID as one explicit device; the normalized user JID lets Baileys enumerate the account's linked devices for Status fan-out. This improves the chance that the primary phone receives the sender's own Status, but does not guarantee that every WhatsApp version will show it in **My Status**. `--to` remains available for manual recipient selection and overrides the synced audience list (the sender account is still included separately).
 
-## Native WhatsApp Status bridge (optional manual fallback)
-
-This route hands the media to WhatsApp's native Sharesheet/editor. In the device test for this project, the resulting Status looked more compressed than the Baileys upload. Prefer the Baileys CLI route when preserving the clearer result is the priority; use this bridge when you specifically need the native WhatsApp editor and are willing to accept its processing.
-
-For a native handoff, install the **Whatsapp-HD Status Bridge** APK before using this command:
-
-1. Open this repository's **Actions** tab on GitHub.
-2. Open the latest successful **Build Status Bridge** workflow run.
-3. Download the `whatsapp-hd-status-bridge-debug` artifact and install the APK inside it.
-4. In Termux, run `termux-setup-storage` and allow the bridge to access the requested photos/videos when Android asks.
-
-Then run:
-
-```sh
-node index.js --native-status --upload "/storage/emulated/0/Download/status.jpg"
-```
-
-The CLI launches the installed Android helper. The helper copies the selected media into its private cache, exposes it through an Android `FileProvider` URI, and uses the Android 14+ Sharesheet custom-action/proxy Activity flow for WhatsApp's **Share to Status** integration. On older Android versions it launches the same WhatsApp Status intent directly for result.
-
-If Android does not grant access to the supplied path, the helper opens the system document picker so you can select the media manually. Review the preview and audience in WhatsApp, then tap **Send** yourself. WhatsApp's current Status Privacy setting remains authoritative; this tool does not change it or silently publish posts.
-
-The native bridge is separate from the Node.js CLI and must be installed once. Its APK is built by GitHub Actions from `android-helper/`. The native bridge does not prefill `--caption`; add a caption in the WhatsApp editor.
-
-This handoff still needs end-to-end testing on the target Android/WhatsApp build. A successful handoff does not by itself prove that a Status was published or visible to recipients.
-
 ## Supported media
 
 Supported extensions for Baileys uploads: JPG, JPEG, PNG, WebP, MP4, and M4V. Jimp generates a small JPEG preview thumbnail for image metadata. The original image is still passed to Baileys using its original file path; the CLI does not resize or re-encode the upload. Videos are passed from their original file path as well. WhatsApp's server-side processing may still vary by media type and account/app version.
@@ -161,10 +133,6 @@ Keep both `auth_info/` and `status-audience.json` private. The latter contains t
 - [x] Automatic audience mode for classic "Only share with…"
 - [x] Normalize the sender account JID before Baileys Status device fan-out
 - [x] Verify Status appears in My Status on the tested Android device
-- [x] Kotlin Android Status Bridge companion app and FileProvider handoff
-- [x] Android 14+ Sharesheet custom action and foreground proxy Activity flow
-- [x] System document-picker fallback when direct media-path access is unavailable
-- [ ] Build and verify native handoff and sender-side visibility on target Android/WhatsApp builds
 - [ ] Support newer custom audience lists and Close Friends
 - [ ] Resolve CONTACTS / DENY_LIST modes from a complete synced contact set
 - [ ] Verify sender-side Status UI synchronization across additional WhatsApp/Android versions
