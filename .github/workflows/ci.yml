@@ -29,5 +29,8 @@ jobs:
       - name: Check JavaScript syntax
         run: npm run check
 
+      - name: Run unit tests
+        run: npm test
+
       - name: Verify CLI help
         run: node index.js --help
