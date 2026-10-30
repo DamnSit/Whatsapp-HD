@@ -2,6 +2,25 @@
 
 A modular Node.js CLI for Termux on Android. It uses Baileys to publish image/video Status updates from local files while preserving the source media bytes on the client.
 
+## CLI architecture
+
+The Termux CLI is split into small modules so upload behavior and diagnostics can be maintained independently:
+
+- `index.js`: entry point and signal handling
+- `src/cli-options.js`: argument parsing and help output
+- `src/whatsapp-client.js`: Baileys connection, pairing, reconnect, and event handling
+- `src/status-audience.js`: Status privacy cache and recipient resolution
+- `src/status-media.js`: source-file validation and thumbnail metadata
+- `src/status-publisher.js`: Status fan-out and publish request
+- `src/native-bridge.js`: optional Android Sharesheet handoff
+- `src/logger.js`: consistent CLI output and sensitive console-log filtering
+
+The Baileys publishing path intentionally keeps the original image/video file as the upload source. The generated 32 px JPEG is only the `jpegThumbnail` message preview; it is not used as the uploaded image. Sender JID normalization before `statusJidList` is preserved because it was part of the successful sender-side visibility fix.
+
+### CLI output
+
+Normal mode uses concise Indonesian log messages with consistent levels: `INFO`, `WARN`, `ERROR`, and `SUCCESS`. Baileys' internal logger is silent by default. Add `--trace` only for troubleshooting; protocol traces can contain sensitive metadata and should not be shared without review.
+
 ## Requirements
 
 - Android with Termux
