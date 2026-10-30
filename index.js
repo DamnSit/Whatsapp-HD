@@ -5,12 +5,14 @@ import makeWASocket, {
 import pino from 'pino';
 import readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { stat } from 'node:fs/promises';
+import { stat, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const AUTH_DIR = process.env.WA_AUTH_DIR || './auth_info';
+const AUDIENCE_FILE = process.env.WA_AUDIENCE_FILE || './status-audience.json';
 const args = process.argv.slice(2);
 const verbose = args.includes('--trace');
+const syncAudienceOnly = args.includes('--sync-audience');
 const getOption = (name) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
@@ -25,10 +27,17 @@ const recipients = recipientInput
   .map((value) => {
     const digits = value.replace(/\D/g, '');
     if (!/^\d{8,15}$/.test(digits)) {
-      throw new Error(`Invalid recipient number: ${value}`);
+      throw new Error('Invalid recipient number: ' + value);
     }
-    return `${digits}@s.whatsapp.net`;
+    return digits + '@s.whatsapp.net';
   });
+
+const STATUS_MODES = {
+  0: 'ALLOW_LIST (Only share with)',
+  1: 'DENY_LIST (My contacts except)',
+  2: 'CONTACTS (My contacts)',
+  3: 'CLOSE_FRIENDS'
+};
 
 const logger = pino({ level: verbose ? 'trace' : 'warn' });
 const rl = readline.createInterface({ input: stdin, output: stdout });
@@ -38,6 +47,8 @@ let starting = false;
 let reconnectTimer;
 let uploadStarted = false;
 let sock;
+let statusPrivacy;
+let audienceWritePromise = Promise.resolve();
 
 function normalizeNumber(input) {
   let number = input.replace(/\D/g, '');
@@ -48,43 +59,164 @@ function normalizeNumber(input) {
   return number;
 }
 
+function normalizeSyncedJid(value) {
+  const jid = String(value ?? '').trim();
+  return /^\d{5,25}@(s\.whatsapp\.net|lid)$/.test(jid) ? jid : null;
+}
+
+async function loadStatusAudience() {
+  try {
+    const parsed = JSON.parse(await readFile(AUDIENCE_FILE, 'utf8'));
+    const mode = Number(parsed.mode);
+    const userJid = Array.isArray(parsed.userJid)
+      ? [...new Set(parsed.userJid.map(normalizeSyncedJid).filter(Boolean))]
+      : [];
+
+    if (Number.isInteger(mode) && Object.hasOwn(STATUS_MODES, mode)) {
+      statusPrivacy = { mode, userJid };
+      console.log('Loaded locally cached Status audience: ' + STATUS_MODES[mode]);
+    }
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      console.warn('Could not read cached Status audience:', error?.message ?? error);
+    }
+  }
+}
+
+function rememberStatusPrivacy(value) {
+  const mode = Number(value?.mode);
+  if (!Number.isInteger(mode) || !Object.hasOwn(STATUS_MODES, mode)) {
+    console.warn('Received an unknown Status privacy mode; automatic audience will not use it.');
+    return;
+  }
+
+  const rawJids = Array.isArray(value?.userJid) ? value.userJid : [];
+  const normalized = rawJids.map(normalizeSyncedJid);
+  const invalidCount = normalized.filter((jid) => !jid).length;
+  const userJid = [...new Set(normalized.filter(Boolean))];
+
+  statusPrivacy = { mode, userJid };
+  audienceWritePromise = writeFile(
+    AUDIENCE_FILE,
+    JSON.stringify({
+      mode,
+      userJid,
+      updatedAt: new Date().toISOString()
+    }, null, 2),
+    { mode: 0o600 }
+  ).catch((error) => {
+    console.error('Could not save Status audience cache:', error?.message ?? error);
+  });
+
+  console.log(
+    'WhatsApp Status audience synced: ' +
+    STATUS_MODES[mode] +
+    '; ' + userJid.length + ' recipient JID(s) received.'
+  );
+  if (invalidCount) {
+    console.warn(invalidCount + ' unrecognized JID(s) were ignored.');
+  }
+}
+
+function resolveStatusRecipients() {
+  if (recipientInput) return recipients;
+
+  if (!statusPrivacy) {
+    throw new Error(
+      'No Status audience has been synced yet. Run node index.js --sync-audience while connected, ' +
+      'then change Status Privacy in the official app and sync again if no audience is found.'
+    );
+  }
+
+  if (statusPrivacy.mode !== 0) {
+    throw new Error(
+      'Automatic sending currently supports only WhatsApp Status Privacy mode ' +
+      '"Only share with..." (ALLOW_LIST). Current mode: ' + STATUS_MODES[statusPrivacy.mode] +
+      '. No upload was attempted. Use --to as a manual override or select "Only share with..." in WhatsApp.'
+    );
+  }
+
+  if (statusPrivacy.userJid.length === 0) {
+    throw new Error(
+      'WhatsApp synced ALLOW_LIST mode, but no recipient JIDs were present. No upload was attempted. ' +
+      'Recheck the selected contacts in WhatsApp Status Privacy and sync again.'
+    );
+  }
+
+  return statusPrivacy.userJid;
+}
+
 function usage() {
-  console.log(`
-WhatsApp HD — local Termux CLI
+  console.log([
+    '',
+    'WhatsApp HD — local Termux CLI',
+    '',
+    'Login / keep connection:',
+    '  npm start',
+    '',
+    'Sync the current WhatsApp Status audience:',
+    '  node index.js --sync-audience',
+    '',
+    'Upload using the synced "Only share with..." audience:',
+    '  node index.js --upload "/storage/emulated/0/Pictures/status.jpg"',
+    '',
+    'Manual recipient override:',
+    '  node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx',
+    '',
+    'Options:',
+    '  --upload PATH    Image/video file to send as a Status',
+    '  --to NUMBERS     Optional manual recipient override (comma-separated)',
+    '  --caption TEXT   Optional caption',
+    '  --sync-audience  Sync Status privacy App State and exit',
+    '  --trace          Verbose Baileys protocol logs (may include sensitive metadata)',
+    '  --help           Show this help',
+    '',
+    'Notes:',
+    '  - Automatic recipient detection currently supports "Only share with..." (ALLOW_LIST).',
+    '  - Baileys emits statusPrivacy App State updates as settings.update events.',
+    '  - Other audience modes and newer custom/close-friends lists are not guessed or expanded.',
+    '  - --to overrides the synced audience and should be used only when you intend to do so.',
+    '  - Keep auth_info and status-audience.json private; both contain account-related data.',
+    '  - A returned message ID is not proof that a Status was published.'
+  ].join('\n'));
+}
 
-Login / keep connection:
-  npm start
+async function syncStatusAudience(socket) {
+  if (typeof socket.resyncAppState !== 'function') {
+    console.warn('This Baileys build does not expose resyncAppState; cannot refresh Status privacy.');
+    return;
+  }
 
-Upload an image:
-  node index.js --upload "/storage/emulated/0/Pictures/status.jpg" --to 62812xxxxxxx
+  console.log('Syncing WhatsApp Status privacy from App State (regular_high)...');
+  try {
+    await socket.resyncAppState(['regular_high'], false);
+    await audienceWritePromise;
+  } catch (error) {
+    console.error('Status audience sync failed:', error?.message ?? error);
+  }
 
-Upload a video with caption:
-  node index.js --upload "/storage/emulated/0/Download/video.mp4" --to 62812xxxxxxx,62813xxxxxxx --caption "Hello"
-
-Options:
-  --upload PATH    Image/video file to send as a Status
-  --to NUMBERS     Recipients needed by Baileys for Status device fan-out
-  --caption TEXT   Optional caption
-  --trace          Verbose Baileys protocol logs (may include sensitive metadata)
-  --help           Show this help
-
-Notes:
-  - Set your audience in WhatsApp Status Privacy first (for example, "Only share with").
-  - Baileys also requires those same recipient JIDs in statusJidList for encryption and fan-out.
-    The current Baileys API does not expose the exact contacts selected in WhatsApp's custom audience.
-  - --to does not change your WhatsApp privacy settings; it supplies the transport recipient list.
-  - Keep auth_info private; it contains login credentials.
-  - This tool does not re-encode media. WhatsApp may still compress uploads.
-  - A returned message ID is not proof that a Status was published. Check the trace ACK and
-    recipient receipts; do not assume sendMessage() success means upload success.
-`);
+  if (statusPrivacy) {
+    console.log(
+      'Status audience available: ' +
+      STATUS_MODES[statusPrivacy.mode] +
+      '; ' + statusPrivacy.userJid.length + ' recipient JID(s).'
+    );
+  } else {
+    console.warn(
+      'No Status privacy record was received. Do not upload yet. ' +
+      'Change Status Privacy in the official WhatsApp app, then run --sync-audience again.'
+    );
+  }
 }
 
 async function uploadStatus(socket) {
   if (!uploadPath || uploadStarted) return;
-  if (recipients.length === 0) {
-    console.error('Upload not started: Baileys needs --to so it can build the Status recipient device list.');
-    console.error('Use the same contacts selected in WhatsApp Status Privacy. Example: --to 62812xxxxxxx');
+
+  let statusRecipients;
+  try {
+    statusRecipients = resolveStatusRecipients();
+  } catch (error) {
+    console.error('Upload not started:', error.message);
     return;
   }
 
@@ -104,21 +236,21 @@ async function uploadStatus(socket) {
       throw new Error('Supported formats: JPG, JPEG, PNG, WebP, MP4, M4V.');
     }
 
-    console.log(`File: ${file}`);
-    console.log(`Size: ${(info.size / 1024 / 1024).toFixed(2)} MB`);
-    console.log(`Baileys recipient JIDs supplied: ${recipients.length}`);
+    console.log('File: ' + file);
+    console.log('Size: ' + (info.size / 1024 / 1024).toFixed(2) + ' MB');
+    console.log('Status audience recipient JIDs: ' + statusRecipients.length);
     console.log('WhatsApp Status Privacy is not modified by this tool.');
     console.log('Sending Status request...');
 
     const result = await socket.sendMessage('status@broadcast', content, {
       broadcast: true,
-      statusJidList: recipients,
+      statusJidList: statusRecipients,
       mediaUploadTimeoutMs: 180000
     });
 
     console.log('Baileys returned message ID:', result?.key?.id ?? '(none)');
     console.log('The message ID alone does not prove publication.');
-    console.log('If the Status is missing, rerun with --trace and inspect ACK errors and recipient receipts.');
+    console.log('Check the WhatsApp sender UI and recipient visibility before treating this as successful.');
   } catch (error) {
     uploadStarted = false;
     console.error('Status upload failed:', error?.message ?? error);
@@ -139,10 +271,25 @@ async function start() {
     });
 
     sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('settings.update', (update) => {
+      if (update?.setting === 'statusPrivacy') {
+        rememberStatusPrivacy(update.value);
+      }
+    });
+
     sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
       if (connection === 'connecting') console.log('Connecting to WhatsApp...');
       if (connection === 'open') {
         console.log('WhatsApp connected.');
+        await syncStatusAudience(sock);
+
+        if (syncAudienceOnly) {
+          console.log('Audience sync check complete.');
+          stopped = true;
+          rl.close();
+          process.exit(0);
+        }
+
         await uploadStatus(sock);
       }
       if (connection !== 'close') return;
@@ -196,6 +343,7 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
+await loadStatusAudience();
 start().catch((error) => {
   console.error(error);
   process.exitCode = 1;
