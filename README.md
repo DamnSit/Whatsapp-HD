@@ -70,7 +70,7 @@ The script does not change Status Privacy in the official app. The connected sen
 
 ## Supported media
 
-Supported extensions: JPG, JPEG, PNG, WebP, MP4, and M4V. The script does not re-encode media, but WhatsApp may still compress uploads. This is not a guarantee of original-quality delivery.
+Supported extensions: JPG, JPEG, PNG, WebP, MP4, and M4V. Jimp generates image thumbnails in pure JavaScript so image uploads do not depend on a native `sharp` build. Videos may use FFmpeg for thumbnail extraction; if FFmpeg is unavailable, Baileys can still upload the media but may omit its preview thumbnail. The script does not re-encode media, and WhatsApp may still compress uploads.
 
 Grant shared-storage access in Termux if needed:
 
