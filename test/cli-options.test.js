@@ -18,7 +18,7 @@ test("parses upload arguments, caption, and recipient override", () => {
   assert.equal(options.caption, "Malam kota");
   assert.equal(options.trace, true);
   assert.deepEqual(options.recipients, [
-    "08123456789@s.whatsapp.net".replace("08123456789", "08123456789"),
+    "08123456789@s.whatsapp.net",
     "628111111111@s.whatsapp.net"
   ]);
 });
