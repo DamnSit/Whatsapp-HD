@@ -20,6 +20,8 @@ The `whatsapp-hd@1.0.0` package exposes `whatsapp-hd` through its executable ent
 
 A fresh consumer installation of the tarball on Windows, Node.js 24.22.1 and npm 12.2.0, ran `whatsapp-hd --help` outside the source checkout and reported **0 vulnerabilities**. The syntax check and all **50 tests** passed; the global-command help changes also passed the CLI tests. GitHub CI builds the package and checks an independent consumer installation and its audit. The source TUI has the Android validation recorded below; a fresh global installation in Termux is a separate user check.
 
+A fresh global installation on the same Windows machine also passed `whatsapp-hd --help` outside the checkout. An isolated source installation with npm 12.2.0 completed in 29 seconds with **0 vulnerabilities**. CI pins npm 12.2.0 and uses `npm ci`; older npm versions were observed repeatedly replacing Zod during source dependency resolution until the job timed out.
+
 ## Unified Upload Media menu
 
 The dashboard now has six actions, beginning with **Upload Media**. Images and videos share the same native picker and their type is detected from file contents. The remaining actions retain their original behavior at their new positions.

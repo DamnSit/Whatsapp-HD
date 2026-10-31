@@ -2,6 +2,7 @@
   "name": "whatsapp-hd",
   "version": "1.0.0",
   "type": "module",
+  "packageManager": "npm@12.2.0",
   "description": "Interactive Termux dashboard and CLI for WhatsApp image/video Status with Baileys",
   "bin": {
     "whatsapp-hd": "index.js"

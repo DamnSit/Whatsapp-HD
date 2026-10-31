@@ -17,12 +17,13 @@ FFmpeg is needed for WebP thumbnails and video decoding validation. It does not 
 
 The global command is `whatsapp-hd`. Run `npm install -g whatsapp-hd@latest` to update it; your session stays in the application data directory described below.
 
-To work from the source repository:
+To work from the source repository, use Node.js 24 LTS and npm 12.2.0. Older npm versions can loop while resolving the image dependency override during a source build.
 
 ```sh
 pkg install git
 git clone https://github.com/DamnSit/Whatsapp-HD.git
 cd Whatsapp-HD
+npm install -g npm@12.2.0
 npm ci
 node index.js
 ```
