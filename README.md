@@ -1,139 +1,176 @@
-# WhatsApp HD
+# Whatsapp-HD
 
-A modular Node.js CLI for Termux on Android. It uses Baileys to publish image/video Status updates from local files. The Android Sharesheet bridge has been retired; Baileys is the sole publishing path.
+An interactive terminal application for WhatsApp image/video Status, designed for Termux on Android. The existing Baileys publisher is shared by the dashboard and CLI. Original media bytes remain the upload source; only image preview thumbnails are generated.
 
-## CLI architecture
-
-The Termux CLI is split into small modules so upload behavior and diagnostics can be maintained independently:
-
-- `index.js`: entry point and signal handling
-- `src/cli-options.js`: argument parsing and help output
-- `src/whatsapp-client.js`: Baileys connection, pairing, reconnect, and event handling
-- `src/status-audience.js`: Status privacy cache and recipient resolution
-- `src/status-media.js`: source-file validation and thumbnail metadata
-- `src/status-publisher.js`: Status fan-out and publish request
-- `src/logger.js`: consistent CLI output and sensitive console-log filtering
-
-The Baileys publishing path intentionally keeps the original image/video file as the upload source. The generated 32 px JPEG is only the `jpegThumbnail` message preview; it is not used as the uploaded image. Sender JID normalization before `statusJidList` is preserved because it was part of the successful sender-side visibility fix.
-
-### CLI output
-
-Normal mode uses concise Indonesian log messages with consistent levels: `INFO`, `WARN`, `ERROR`, and `SUCCESS`. Baileys' internal logger is silent by default. Add `--trace` only for troubleshooting; protocol traces can contain sensitive metadata and should not be shared without review.
-
-## Requirements
-
-- Android with Termux
-- Node.js 20 or newer (Node.js LTS is recommended)
-- A WhatsApp account you control
-- Internet access
-
-No root access, VPS, or WebView is required.
-
-## Project structure
-
-- `index.js` — CLI entry point and signal handling.
-- `src/cli-options.js` — argument parsing and help text.
-- `src/whatsapp-client.js` — Baileys connection, pairing, reconnect, and lifecycle.
-- `src/status-audience.js` — Status privacy parsing, local cache, and recipient selection.
-- `src/status-media.js` — media validation and payload preparation. Original image/video files are passed to Baileys without re-encoding.
-- `src/status-publisher.js` — sender JID normalization and Status fan-out.
-- `src/logger.js` — consistent CLI output and filtering of known sensitive Signal session dumps.
-
-Normal logs use concise `[INFO]`, `[SUCCESS]`, `[WARN]`, and `[ERROR]` labels. `--trace` enables verbose Baileys diagnostics; trace output can contain sensitive protocol metadata and should be redacted before sharing.
-
-## Install in Termux
+## Install and launch
 
 ```sh
 pkg update
-pkg install nodejs-lts git
+pkg install nodejs-lts git termux-api ffmpeg
 git clone https://github.com/DamnSit/Whatsapp-HD.git
 cd Whatsapp-HD
-npm install
-npm run check
-npm test
-```
-
-If npm reports that dependency install scripts are blocked, review them before approving. Baileys and protobufjs use install scripts; only approve scripts for packages you trust.
-
-## First-time pairing
-
-```sh
+npm ci
 node index.js
 ```
 
-Enter your WhatsApp number when prompted. Then open WhatsApp on your primary phone:
+Use Node.js 20 or newer. Install the **Termux:API Android companion application** from a compatible source matching your Termux installation. `pkg install termux-api` installs the command-line package, not the Android app. ZeroTermux builds may supply their own API integration; verify `termux-storage-get` opens Android DocumentsUI in your build.
 
-**Settings → Linked devices → Link a device → Link with phone number**
+FFmpeg is needed for WebP thumbnails and video decoding validation. It does not re-encode the uploaded source. JPEG/PNG decoding and their existing 32 px JPEG preview generation continue to use Jimp. No new npm or TUI dependency is required.
 
-Enter the pairing code printed by Termux. Wait until the CLI reports that WhatsApp is connected.
+This project is still private. It has no global `bin` entry and is not being published to npm in this phase.
 
-Credentials are stored in `./auth_info`. Keep this directory private. Do not commit it, upload it, or share its contents.
+## Dashboard and controls
 
-## Automatic Status audience sync
+Launching without arguments opens the dashboard, showing application version, connection, privacy mode, numeric Status Audience, validation, synchronization state, and last successful sync time. Opening the dashboard alone does not start pairing.
 
-Baileys v7 exposes WhatsApp's `statusPrivacy` App State mutation through the `settings.update` event. Whatsapp-HD listens for that event and stores the decoded audience mode and JIDs locally in `status-audience.json`.
+Menu: **Upload Media**, **Sync Status Audience**, **Connect / Reconnect WhatsApp**, **Account Management**, **Settings / Help**, **Exit**.
 
-Run a sync check:
+| Control | Action |
+| --- | --- |
+| Up / Down | Select an action |
+| Enter | Open or confirm the selected action |
+| Escape | Return to the previous screen |
+| Page Up / Page Down | Scroll long details, confirmations, or Help |
+| Q | Exit safely from menus or progress screens |
+| Ctrl+C | Exit safely from any screen |
+
+The display follows terminal resize events and updates changed rows. Exit restores raw input state, cursor visibility, wrapping, and the normal terminal screen. A very small terminal displays a resize prompt. Use the CLI when stdin/stdout are not interactive terminals.
+
+The dashboard uses a dark canvas, mint highlights, a compact status panel and numbered actions. Screen and selection transitions are brief; ongoing operations show an animated spinner and an indeterminate activity bar. Animation stops when the screen is idle or the application exits. Set `WA_REDUCED_MOTION=1` for a static display or `NO_COLOR=1` to disable colors.
+
+## Pair WhatsApp
+
+Select **Connect / Reconnect WhatsApp**, or run:
 
 ```sh
-node index.js --sync-audience
+node index.js --connect
 ```
 
-For the automatic path, set WhatsApp Status Privacy to **Only share with…** in the official app. Then upload without `--to`:
+Enter your WhatsApp number, then enter the displayed pairing code in the official app: **Settings → Linked devices → Link a device → Link with phone number**. Indonesian local `08…` pairing numbers are converted to `628…`. Wait for the connected message. `--connect` directly starts the connection flow and never recursively opens the dashboard.
 
-Image:
+## Upload and caption workflow
+
+1. Choose **Upload Media** to select either an image or a video. Android's native document picker opens through `termux-storage-get`.
+2. Select media. The application validates the copied file's content and type, then shows its temporary filename, format, size, and image dimensions in the caption screen.
+3. Enter a caption, save an empty caption, or skip it.
+4. Review the confirmation. Optionally choose **Manual Recipients** and enter comma-separated international numbers. The confirmation clearly labels this override; **Use Synced Audience** removes it for this upload.
+5. Use **Edit Caption**, **Clear Caption**, **Skip Caption**, or **Change Media** as needed. Editing returns to the same confirmation without selecting media again. Changing media retains the draft caption for further editing.
+6. **Confirm Upload** calls the same application service and `publishStatus()` used by the CLI. The reviewed recipients are frozen for this request so a later synchronization event cannot silently replace them.
+7. Read **Successful** when the upload request completes, or **Failed** with the error when it rejects, then return to the dashboard. Temporary copies are cleaned in `finally`, including cancellation, failure, and normal exit.
+
+If an audience is unavailable, empty, or unsupported, use **Connect / Sync Audience** or an explicit manual override before uploading. A cached audience can be used after reviewing its warning; it is never labelled newly synchronized without a new privacy record.
+
+### Caption editor
+
+| Control | Action |
+| --- | --- |
+| Text or paste | Insert text at the caret |
+| Arrow keys / Home / End | Move through the caption |
+| Backspace / Delete | Remove a grapheme / the next grapheme |
+| Enter | Save, including an empty caption |
+| Ctrl+J | Insert a newline |
+| Ctrl+U | Clear the entire caption |
+| Escape | Skip/remove the caption |
+
+Unicode, emoji, combining characters, intended spaces, and newlines are preserved. Bracketed paste is enabled so pasted newlines remain text instead of submitting the screen. Without bracketed paste, terminals may send pasted carriage returns as Enter; use Ctrl+J or a terminal with bracketed-paste support for multiline entry. Terminal escape/control commands are excluded from caption text. Q is ordinary text while editing; use Ctrl+C to exit.
+
+There is no arbitrary caption length limit. Errors reported by Baileys are shown on the result screen. Empty and skipped captions produce no `caption` field. The existing conditional caption payload and sender fan-out remain intact.
+
+### Media and native picker limitations
+
+Supported: **JPEG, PNG, WebP, MP4, M4V**. Validation checks signatures, image/container completeness, ISO BMFF `ftyp` brands, image decoding, and video frame decoding. Empty files, unsupported formats, corrupt/truncated files, and CLI filename/content mismatches are rejected. Video decoding can take time for long files; it does not produce a replacement video.
+
+`termux-storage-get` uses an unrestricted `*/*` picker. It copies the selected provider file into a unique application-owned temporary directory; it does not expose a `content://` URI or the provider's original filename. Therefore the UI explicitly shows a temporary name such as `selection.jpg`, derived from the detected format. The original provider filename/extension cannot be checked; filename mismatch checks apply whenever the filename is available, including CLI paths. The media type is detected from its contents so **Upload Media** accepts both images and videos. The user's original file is never deleted.
+
+Termux:API 0.53.0 can return exit code 0 while DocumentsUI is still open. The TUI waits up to two minutes for a copy whose size and modification time have stopped changing for one second, then validates its contents. This API version does not report native cancellation to the command: after cancelling in Android, press **Esc** in the terminal to return to the dashboard. **Q / Ctrl+C** exits safely while waiting. Large or slow provider copies may exceed the timeout and need another attempt.
+
+No Android file manager, Sharesheet bridge, or second uploader is included. `termux-setup-storage` may be useful for direct CLI access to shared storage; the system picker handles its own provider access.
+
+## Status Audience accuracy
+
+Baileys `settings.update` supplies the decoded `statusPrivacy` App State. Synchronization requests `regular_high` through `resyncAppState`. Parsing, normalization, deduplication, recipient resolution, and indicators are centralized in `src/status-audience.js`.
+
+| State | Dashboard meaning |
+| --- | --- |
+| `12 CONTACTS` / `✓ VALID` | ALLOW_LIST with 12 unique valid synchronized recipient JIDs |
+| `0 CONTACTS` / `! EMPTY AUDIENCE` | ALLOW_LIST with no usable recipients |
+| `UNSUPPORTED MODE` / `! MANUAL RECIPIENTS REQUIRED` | Automatic expansion is unavailable; no invented zero count |
+| `UNKNOWN` / `! SYNC REQUIRED` | No usable audience data |
+
+The displayed count is **synchronized recipient JIDs**, not the total phone contact count or an independent verification of every selection in the official app. Invalid JIDs are excluded and their count is retained. Device-qualified JIDs are normalized and duplicates removed. The sender account is included separately by the existing publisher.
+
+Automatic resolution supports only classic **Only share with… (`ALLOW_LIST`)**. My contacts, My contacts except…, Close Friends, and newer custom lists are not expanded. Use manual recipients intentionally when needed. The application never changes official WhatsApp privacy settings.
+
+`status-audience.json` stores mode, normalized recipients, invalid count, and `updatedAt`. Cached data is labelled as cached until a new privacy record is received. Legacy caches without a timestamp show an unknown last sync. Failed syncs and successful resync calls that deliver no privacy record do not advance that timestamp. Re-save **Only share with…** in WhatsApp and sync again if necessary.
+
+## Persistent sessions and account management
+
+Default storage is independent of the launch directory:
+
+```text
+$XDG_DATA_HOME/whatsapp-hd/          # when XDG_DATA_HOME is set
+~/.local/share/whatsapp-hd/          # otherwise
+  auth_info/
+  status-audience.json
+```
+
+| Variable | Override |
+| --- | --- |
+| `WA_DATA_DIR` | Base application directory |
+| `WA_AUTH_DIR` | Authentication directory; takes precedence over the base |
+| `WA_AUDIENCE_FILE` | Audience file; takes precedence over the base |
+
+Use absolute override paths when you need working-directory independence. Sensitive directories/files use restricted permissions where supported. Credentials and recipient data must remain private.
+
+With default paths, if no destination authentication directory exists, initialization finds a legacy `auth_info/creds.json` in the launch directory or repository, copies the session and associated audience cache once, and reports the migration. It leaves the original files untouched and never overwrites destination credentials. Multiple distinct legacy sessions require explicit overrides. Setting any WA storage override opts out of automatic migration. If migration is interrupted, retain both locations and explicitly select the known-good original with `WA_AUTH_DIR` and `WA_AUDIENCE_FILE`; do not delete/reset credentials to troubleshoot.
+
+A private `.legacy-session-migrated` marker records migration in the application data directory. Successful logout also records this marker, so restarting cannot silently import the preserved legacy credentials again.
+
+**Exit** closes the local process and retains credentials/cache. It never invokes WhatsApp logout.
+
+**Account Management → Logout WhatsApp → Confirm Logout** calls Baileys' supported remote logout. Only its successful return or an explicit logged-out event permits local credential/cache removal. A network failure preserves local files. Reconnect timers are cancelled, handlers detached, and pending writes drained before removal. Reconnecting after logout requires pairing again. The confirmation defaults to Cancel.
+
+## Existing CLI
 
 ```sh
+node index.js --help
+node index.js --connect
+node index.js --sync-audience
 node index.js --upload "/storage/emulated/0/Pictures/status.jpg"
-```
-
-Video with a caption:
-
-```sh
 node index.js --upload "/storage/emulated/0/Download/video.mp4" --caption "Hello"
+node index.js --upload "/path/status.jpg" --to "628123456789,628987654321"
+node index.js --upload "/path/status.png" --caption "" --trace
 ```
 
-The CLI refreshes the `regular_high` App State collection when it connects. If no Status privacy record is received, edit and save the selected audience in the official WhatsApp app, run `node index.js --sync-audience` again, and check the reported mode and recipient count.
+`--upload`, `--caption`, `--to`, `--sync-audience`, `--trace`, `--help` remain available. `--sync-audience` and upload commands finish and close the local connection. `--connect` keeps the connection running until you exit. CLI recipient parsing retains its existing behavior; use international digits for manual recipients.
 
-**Safety limitation:** automatic recipient expansion currently supports only the classic **Only share with…** mode (`ALLOW_LIST`) when Baileys returns its `userJid` list. The current Baileys protobuf does not fully model newer custom audience lists or close-friends list structures. **My contacts**, **My contacts except…**, custom lists, and Close Friends are not guessed or expanded. In those modes the script refuses automatic upload; use `--to` only as an intentional manual override.
+Normal logs remain concise; `--trace` enables Baileys diagnostics. Traces can contain sensitive metadata—review/redact before sharing. Known sensitive Signal session console dumps remain filtered.
 
-The script does not change Status Privacy in the official app. The sender account JID is normalized with Baileys' `jidNormalizedUser` before it is prepended to `statusJidList`. This matters because Baileys treats a device-qualified JID as one explicit device; the normalized user JID lets Baileys enumerate the account's linked devices for Status fan-out. This improves the chance that the primary phone receives the sender's own Status, but does not guarantee that every WhatsApp version will show it in **My Status**. `--to` remains available for manual recipient selection and overrides the synced audience list (the sender account is still included separately).
+**A successful `sendMessage()` return or Message ID is not proof of publication. Verify My Status and visibility with selected recipients.** Original source uploads and the normalized sender inclusion remain unchanged, but WhatsApp may process media server-side.
 
-## Supported media
+## Troubleshooting
 
-Supported extensions for Baileys uploads: JPG, JPEG, PNG, WebP, MP4, and M4V. Jimp generates a small JPEG preview thumbnail for image metadata. The original image is still passed to Baileys using its original file path; the CLI does not resize or re-encode the upload. Videos are passed from their original file path as well. WhatsApp's server-side processing may still vary by media type and account/app version.
+- Picker command unavailable: install `termux-api` and the compatible Android companion, then retry. For a picker that does not open, check API integration, Android permissions, and app installation source. Q/Ctrl+C cancels the local action.
+- FFmpeg missing: `pkg install ffmpeg`. WebP and video validation require it; JPEG/PNG can still be selected without it.
+- Unsupported/empty audience: choose classic Only share with… in WhatsApp, save it, and sync; or review a manual override.
+- Stale audience after sync: no new privacy record arrived. The old count and timestamp remain labelled cached.
+- Session disconnected: try Connect, inspect the network, and check Linked devices. Do not erase credentials to fix Status visibility.
+- Layout too small: enlarge the terminal, reduce font size, or scroll details with Page Up/Page Down.
+- Interrupted upload: check My Status before retrying to avoid duplicate submissions.
 
-Grant shared-storage access in Termux if needed:
+## Development and validation
 
 ```sh
-termux-setup-storage
+npm run check
+npm test
+npm audit
+node index.js --help
 ```
 
-## Diagnostics
+With FFmpeg installed, `node scripts/validate-media.js` also checks real synthetic JPEG, PNG, WebP, MP4 and M4V files, original-byte preservation, captions and truncation rejection without connecting to WhatsApp.
 
-```sh
-node index.js --sync-audience
-node index.js --upload "/storage/emulated/0/Download/video.mp4" --trace
-```
+The cross-platform syntax check covers nested source modules, scripts, and tests. Unit tests mock Android and Baileys and require no WhatsApp account. They cover media validation, picker cleanup, Unicode captions, publisher fan-out, audience states, storage migration, logout failure/races, terminal restoration, and upload navigation.
 
-Trace logs can contain sensitive protocol metadata and cryptographic session details. Review and redact logs before sharing them. A successful `sendMessage()` return and message ID alone do not confirm publication. Check the sender UI and ask a selected recipient to confirm visibility.
+The implementation is separated into `src/tui/`, `src/android/`, `src/storage/`, and `src/account/`; the shared client lives in `src/whatsapp-client.js`. `src/status-publisher.js` remains the sole publishing implementation.
 
-Do not repeatedly delete or reset `auth_info` to troubleshoot Status visibility. Session authentication and Status publication/synchronization are separate problems.
-
-Keep both `auth_info/` and `status-audience.json` private. The latter contains the recipient JIDs synced from your WhatsApp account.
-
-## Project status
-
-- [x] Termux / Node.js CLI scaffold
-- [x] Pairing-code flow and local multi-file auth
-- [x] Local image/video path handling
-- [x] Optional caption and manual recipient override
-- [x] Listen for Baileys `statusPrivacy` App State updates
-- [x] Persist the decoded ALLOW_LIST recipient JIDs locally
-- [x] Automatic audience mode for classic "Only share with…"
-- [x] Normalize the sender account JID before Baileys Status device fan-out
-- [x] Verify Status appears in My Status on the tested Android device
-- [ ] Support newer custom audience lists and Close Friends
-- [ ] Resolve CONTACTS / DENY_LIST modes from a complete synced contact set
-- [ ] Verify sender-side Status UI synchronization across additional WhatsApp/Android versions
-- [ ] Confirmed upstream fix for Baileys Status/LID edge cases
+See [on-device validation](docs/validation.md) for the tested environment and remaining live-account checks. npm global installation is a separate phase.

@@ -3,36 +3,40 @@ import { stdin, stdout } from "node:process";
 import { parseCliOptions, usageText } from "./src/cli-options.js";
 import { installSensitiveConsoleFilter, log, errorMessage } from "./src/logger.js";
 import { runWhatsAppClient } from "./src/whatsapp-client.js";
+import { runTui } from "./src/tui/app.js";
 
 installSensitiveConsoleFilter();
-
-let stopClient;
+process.umask(0o077);
 
 async function main() {
-  const options = parseCliOptions(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  const options = parseCliOptions(argv);
 
   if (options.help) {
     console.log(usageText());
     return;
   }
 
+  if (argv.length === 0) { await runTui(); return; }
+
   const terminal = readline.createInterface({ input: stdin, output: stdout });
+  let client, shuttingDown = false;
+  const shutdown = async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    terminal.close();
+    await client?.stop();
+  };
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
 
   try {
-    stopClient = await runWhatsAppClient({ options, readline: terminal });
+    await runWhatsAppClient({ options, readline: terminal, onClient: (value) => { client = value; if (shuttingDown) void value.stop(); } });
   } catch (error) {
     terminal.close();
     throw error;
   }
 }
-
-function shutdown() {
-  stopClient?.();
-  process.exit(0);
-}
-
-process.once("SIGINT", shutdown);
-process.once("SIGTERM", shutdown);
 
 main().catch((error) => {
   log.error(errorMessage(error));

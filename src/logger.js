@@ -7,8 +7,14 @@ const COLORS = {
 };
 
 const useColor = Boolean(process.stdout.isTTY && !process.env.NO_COLOR && process.env.TERM !== "dumb");
+let sink;
+
+export function setLogSink(value) {
+  sink = value;
+}
 
 function write(level, message, stream = process.stdout) {
+  if (sink) { sink({ level, message: String(message) }); return; }
   const label = level.toUpperCase().padEnd(5);
   const color = useColor ? COLORS[level] : "";
   const reset = useColor ? COLORS.reset : "";

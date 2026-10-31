@@ -21,6 +21,7 @@ export function parseCliOptions(argv) {
   const options = {
     help: false,
     trace: false,
+    connectOnly: false,
     syncAudienceOnly: false,
     uploadPath: undefined,
     caption: "",
@@ -32,10 +33,11 @@ export function parseCliOptions(argv) {
     const argument = argv[index];
     if (argument === "--help" || argument === "-h") options.help = true;
     else if (argument === "--trace") options.trace = true;
+    else if (argument === "--connect") options.connectOnly = true;
     else if (argument === "--sync-audience") options.syncAudienceOnly = true;
     else if (OPTION_VALUES.has(argument)) {
       const value = argv[index + 1];
-      if (!value || value.startsWith("--")) throw new Error(`Opsi ${argument} membutuhkan nilai.`);
+      if (value === undefined || (argument !== "--caption" && !value) || value.startsWith("--")) throw new Error(`Opsi ${argument} membutuhkan nilai.`);
       if (argument === "--upload") options.uploadPath = value;
       if (argument === "--caption") options.caption = value;
       if (argument === "--to") options.recipientInput = value;
@@ -52,10 +54,11 @@ export function parseCliOptions(argv) {
 export function usageText() {
   return [
     "",
-    "WhatsApp HD — Termux CLI",
+    "Whatsapp-HD — Interactive Termux application",
     "",
     "Perintah:",
-    "  node index.js                                      Hubungkan akun WhatsApp",
+    "  node index.js                                      Interactive dashboard",
+    "  node index.js --connect                            Hubungkan akun WhatsApp",
     "  node index.js --sync-audience                      Sinkronisasi audiens Status",
     '  node index.js --upload "/path/status.jpg"          Unggah Status via Baileys',
     '  node index.js --upload "/path/video.mp4" --caption "Teks"',
@@ -66,6 +69,7 @@ export function usageText() {
     "  --caption TEXT      Caption Status",
     "  --to NUMBERS        Override penerima, pisahkan beberapa nomor dengan koma",
     "  --sync-audience     Sinkronkan pengaturan privasi Status lalu keluar",
+    "  --connect           Jalankan koneksi/pairing langsung tanpa TUI",
     "  --trace             Aktifkan log diagnostik Baileys",
     "  --help, -h          Tampilkan bantuan",
     "",

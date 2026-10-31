@@ -36,3 +36,10 @@ test("rejects missing option values and unknown switches", () => {
 test("rejects invalid recipient numbers", () => {
   assert.throws(() => parseManualRecipients("abc"), /tidak valid/);
 });
+
+test("connect bypass flag and empty/multiline CLI captions remain supported", () => {
+  assert.equal(parseCliOptions(["--connect"]).connectOnly, true);
+  const caption = "  Malam ✨\n第二行 👨‍👩‍👧‍👦  ";
+  assert.equal(parseCliOptions(["--caption", caption]).caption, caption);
+  assert.equal(parseCliOptions(["--caption", ""]).caption, "");
+});
