@@ -98,23 +98,23 @@ export function resolveStatusRecipients({ manualRecipients, statusPrivacy }) {
 
   if (!statusPrivacy) {
     throw new Error(
-      "Audiens Status belum tersinkron. Jalankan node index.js --sync-audience, " +
-      "lalu periksa kembali pengaturan privasi Status di WhatsApp."
+      "Status audience is not synchronized. Run whatsapp-hd --sync-audience, " +
+      "then check your Status privacy settings in WhatsApp."
     );
   }
 
   if (statusPrivacy.mode !== 0) {
     const modeName = STATUS_MODES[statusPrivacy.mode] ?? "unknown";
     throw new Error(
-      `Mode privasi "${modeName}" belum didukung untuk pemilihan otomatis. ` +
-      'Gunakan "Only share with…" atau tentukan penerima dengan --to.'
+      `Privacy mode "${modeName}" is not supported for automatic audience selection. ` +
+      'Use "Only share with…" or specify recipients with --to.'
     );
   }
 
   if (statusPrivacy.userJid.length === 0) {
     throw new Error(
-      'Mode "Only share with…" tersinkron, tetapi daftar penerimanya kosong. ' +
-      "Periksa kontak terpilih lalu jalankan --sync-audience kembali."
+      'The "Only share with…" audience is synchronized, but its recipient list is empty. ' +
+      "Check the selected contacts, then run --sync-audience again."
     );
   }
 

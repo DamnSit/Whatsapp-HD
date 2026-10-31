@@ -14,7 +14,7 @@ export function dashboardLines(state) {
     `Privacy Mode       ${audience.mode}`,
     `Automatic audience ${audience.automatic ? "Supported (ALLOW_LIST)" : "Unavailable"}`,
     `Synchronization    ${state.sync}`,
-    `Last sync          ${audience.updatedAt ? new Date(audience.updatedAt).toLocaleString() : "Unknown"}`,
+    `Last sync          ${audience.updatedAt ? new Date(audience.updatedAt).toLocaleString("en-US") : "Unknown"}`,
     `Cache              ${audience.cached ? "Available" : "Unavailable"}`,
     ...(audience.invalidCount ? [`Invalid JIDs        ${audience.invalidCount} ignored`] : []),
     ...(audience.warning ? [`! ${audience.warning}`] : []),

@@ -2,6 +2,8 @@
 
 An interactive terminal application for WhatsApp image/video Status, designed for Termux on Android. The existing Baileys publisher is shared by the dashboard and CLI. Original media bytes remain the upload source; only image preview thumbnails are generated.
 
+The interface, CLI help, application messages, and displayed dates use English.
+
 ## Install and launch
 
 ```sh

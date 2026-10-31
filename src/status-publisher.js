@@ -14,7 +14,7 @@ export async function publishStatus(socket, {
   const senderJid = jidNormalizedUser(socket.user?.id);
 
   if (!senderJid) {
-    throw new Error("JID akun pengirim tidak valid; upload dibatalkan.");
+    throw new Error("Invalid sender account JID; upload cancelled.");
   }
 
   const normalizedRecipients = statusRecipients
@@ -25,11 +25,11 @@ export async function publishStatus(socket, {
   const { content, dimensions } = await prepareStatusPayload(media, caption);
 
   log.info(`File       : ${media.filename}`);
-  log.info(`Ukuran     : ${formatBytes(media.size)}`);
-  if (dimensions) log.info(`Resolusi   : ${dimensions}`);
-  log.info(`Audiens    : ${normalizedRecipients.length} penerima + akun pengirim`);
-  log.info("Kualitas   : file sumber dipertahankan; tidak ada re-encoding di CLI");
-  log.info("Mengunggah Status…");
+  log.info(`Size       : ${formatBytes(media.size)}`);
+  if (dimensions) log.info(`Resolution : ${dimensions}`);
+  log.info(`Audience   : ${normalizedRecipients.length} recipients + sender account`);
+  log.info("Quality    : original source file preserved; no CLI re-encoding");
+  log.info("Uploading Status…");
 
   const result = await socket.sendMessage("status@broadcast", content, {
     broadcast: true,
@@ -39,11 +39,11 @@ export async function publishStatus(socket, {
 
   const messageId = result?.key?.id;
   if (messageId) {
-    log.success("Permintaan upload diterima oleh Baileys.");
+    log.success("Upload request accepted by Baileys.");
     log.info(`Message ID : ${messageId}`);
   } else {
-    log.warn("Baileys tidak mengembalikan Message ID.");
+    log.warn("Baileys did not return a Message ID.");
   }
-  log.info("Periksa My Status dan visibilitas pada penerima untuk memastikan publikasi.");
+  log.info("Check My Status and recipient visibility to confirm publication.");
   return result;
 }

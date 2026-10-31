@@ -137,7 +137,7 @@ export async function createWhatsAppClient({ paths, options = {}, question,
             lastConnectionError = undefined;
             resolveConnection?.();
             connecting = resolveConnection = rejectConnection = undefined;
-            report.success("WhatsApp terhubung.");
+            report.success("WhatsApp connected.");
           }
           if (connection !== "close") return;
           const status = lastDisconnect?.error?.output?.statusCode;
@@ -159,7 +159,7 @@ export async function createWhatsAppClient({ paths, options = {}, question,
             return;
           }
           if (!intentionalLogout && !stopped && !reconnectTimer) {
-            report.warn("Koneksi terputus: " + errorMessage(lastDisconnect?.error || "Reconnecting…"));
+            report.warn("Connection interrupted: " + errorMessage(lastDisconnect?.error || "Reconnecting…"));
             reconnectTimer = setTimeout(() => {
               reconnectTimer = undefined;
               void startSocket().catch((error) => { failConnection(error); report.error(errorMessage(error)); });
@@ -168,7 +168,7 @@ export async function createWhatsAppClient({ paths, options = {}, question,
         }
       };
       for (const [event, handler] of Object.entries(handlers)) active.ev.on(event, handler);
-      if (auth.creds.registered) report.info("Sesi tersimpan ditemukan.");
+      if (auth.creds.registered) report.info("Saved session found.");
     })();
     try { await starting; } finally { starting = undefined; }
   }

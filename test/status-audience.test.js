@@ -82,7 +82,7 @@ test("audience states count only normalized unique JIDs and retain sync metadata
 
 test("recipient resolution normalizes and deduplicates again at the upload boundary", () => {
   assert.deepEqual(resolveStatusRecipients({ statusPrivacy: { mode: 0, userJid: ["12345678:2@s.whatsapp.net", "12345678@s.whatsapp.net", "bad"] } }), ["12345678@s.whatsapp.net"]);
-  assert.throws(() => resolveStatusRecipients({ statusPrivacy: { mode: 0, userJid: ["bad"] } }), /kosong/);
+  assert.throws(() => resolveStatusRecipients({ statusPrivacy: { mode: 0, userJid: ["bad"] } }), /empty/);
 });
 
 test("uses explicit recipient override when provided", () => {
@@ -99,6 +99,6 @@ test("refuses automatic upload for unsupported audience modes", () => {
       manualRecipients: [],
       statusPrivacy: { mode: 2, userJid: [] }
     }),
-    /belum didukung/
+    /not supported/
   );
 });

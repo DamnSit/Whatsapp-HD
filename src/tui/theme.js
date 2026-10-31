@@ -34,7 +34,7 @@ export function dashboardPanel(renderer, state, columns) {
   const audienceText = audience.state === "unsupported" ? "MANUAL REQUIRED" : `${audience.label} · ${validation}`;
   const connectionColor = state.connection === "Connected" ? "mint" : /connect|pair/i.test(state.connection) && state.connection !== "Disconnected" ? "blue" : "muted";
   const sync = audience.cached ? state.fresh ? state.sync || "Synchronized" : "Cached · refresh required" : "No cache · sync required";
-  const updated = audience.updatedAt ? new Date(audience.updatedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Never";
+  const updated = audience.updatedAt ? new Date(audience.updatedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Never";
   const lines = [
     metric(renderer, "WHATSAPP", state.connection || "Disconnected", inner, connectionColor),
     metric(renderer, "AUDIENCE", audienceText, inner, audience.state === "valid" ? "mint" : "warning"),

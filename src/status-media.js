@@ -22,12 +22,12 @@ export function formatMediaInfo(media) {
 }
 
 export async function inspectMedia(inputPath, { expectedKind, allowNoExtension = false, signal, decodeVideo = validateVideoFrames, probeVideo = probeVideoMetadata, decodeWebp = webpPreview } = {}) {
-  if (!inputPath) throw new Error("--upload membutuhkan path file.");
+  if (!inputPath) throw new Error("--upload requires a file path.");
 
   const file = path.resolve(inputPath);
   const info = await stat(file);
   if (!info.isFile() || info.size === 0) {
-    throw new Error("File tidak ditemukan, bukan file biasa, atau berukuran 0 byte.");
+    throw new Error("Media must be a non-empty regular file.");
   }
 
   const extension = path.extname(file).toLowerCase();
