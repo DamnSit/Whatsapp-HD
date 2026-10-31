@@ -2,6 +2,12 @@
 
 The TUI implementation is available in this working tree. The npm executable is `whatsapp-hd`; package and global-installation checks are documented below.
 
+## Version 1.0.5 English language validation
+
+CLI help, phone/recipient validation, audience errors, connection messages and upload logs now use English. Dashboard dates explicitly use the English `en-US` locale while retaining the system time zone. The README documents the interface language.
+
+On Windows, the syntax check, all **70 tests**, CLI help and English date formatting checks passed. Existing tests now match the English errors and use English sample captions. Dependencies and upload behavior are unchanged. This language update has not yet been validated in Termux.
+
 ## Version 1.0.4 media summary validation
 
 The phone's 1.0.3 caption screen showed only `MP4 · 6.75 MB`: video inspection validated frames but did not collect dimensions or frame rate. Version 1.0.4 reads the first video stream's resolution and average FPS with FFprobe, supplied by the existing FFmpeg package. Caption and confirmation screens share one summary, such as `MP4 · 6.75 MB · 1920x1080 · 60FPS`; images show their full source resolution without FPS. Summary lines appear before filenames so metadata stays visible in compact caption layouts. Missing average FPS is shown explicitly instead of substituting a guessed rate.
