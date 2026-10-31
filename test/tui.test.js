@@ -11,7 +11,7 @@ import { Renderer, width, wrap } from "../src/tui/renderer.js";
 import { MAIN_MENU } from "../src/tui/dashboard.js";
 import { uploadScreen } from "../src/tui/upload-screen.js";
 import { withPickedMedia } from "../src/android/file-picker.js";
-import { inspectMedia } from "../src/status-media.js";
+import { formatMediaInfo, inspectMedia } from "../src/status-media.js";
 import { imageFile, mp4, temporary } from "./helpers.js";
 
 function terminal() {
@@ -79,6 +79,27 @@ test("phone prompt restores pending progress messages and accepts a single line"
   } finally { complete(); ui.close(); await ui.stopPromise; }
 });
 
+test("source resolution and video FPS remain visible in compact caption screens", async () => {
+  const streams = terminal(), ui = new TerminalUI({ ...streams, animate: false });
+  ui.start();
+  try {
+    for (const columns of [32, 40, 56]) {
+      Object.assign(streams.output, { columns, rows: 14 });
+      for (const media of [
+        { format: "MP4", kind: "video", size: 6.75 * 1024 * 1024, width: 1920, height: 1080, fps: 60 },
+        { format: "JPEG", kind: "image", size: 2.4 * 1024 * 1024, width: 4000, height: 3000 }
+      ]) {
+        const pending = ui.editCaption("", "Add caption", [formatMediaInfo(media), "File: selection"]);
+        const display = ui.renderer.previous.join("\n");
+        assert.match(display, new RegExp(`${media.width}x${media.height}`));
+        if (media.kind === "video") assert.match(display, /60FPS/);
+        else assert.doesNotMatch(display, /FPS/);
+        ui.handle({ name: "enter" }); await pending;
+      }
+    }
+  } finally { ui.close(); await ui.stopPromise; }
+});
+
 test("pairing code stays in a dedicated panel despite logs and mobile resizing", async () => {
   const streams = terminal(), ui = new TerminalUI({ ...streams, animate: false });
   ui.start(); let complete;
@@ -131,13 +152,13 @@ test("manual recipient input preserves the caption and cancelling an edit preser
 test("Upload Media can change from image to video while preserving the caption and source bytes", async (t) => {
   const root = await temporary(t), image = await imageFile(root), video = path.join(root, "source.mp4");
   await writeFile(video, mp4());
-  const files = [image, video], choices = [7, 0], formats = [];
+  const files = [image, video], choices = [7, 0], formats = [], captionDetails = [];
   let selected = 0, sent, sentBytes;
   const ui = {
     closed: false,
     busy: async (_title, operation) => operation(),
-    editCaption: async (caption) => ({ value: caption || "Caption ✨\nline two" }),
-    menu: async (_title, lines) => { formats.push(lines.find((line) => line.startsWith("Format:"))); return choices.shift(); },
+    editCaption: async (caption, _title, details) => { captionDetails.push(details[0]); return { value: caption || "Caption ✨\nline two" }; },
+    menu: async (_title, lines) => { formats.push(lines[0]); return choices.shift(); },
     message: async () => {}
   };
   const client = {
@@ -147,10 +168,12 @@ test("Upload Media can change from image to video while preserving the caption a
   await uploadScreen(ui, client, { pickMedia: (kind, use) => withPickedMedia(kind, use, {
     temporaryRoot: root,
     pick: async (destination) => { await copyFile(files[selected++], destination); return true; },
-    inspect: (file, options) => inspectMedia(file, { ...options, decodeVideo: async () => {} })
+    inspect: (file, options) => inspectMedia(file, { ...options, decodeVideo: async () => {}, probeVideo: async () => ({ width: 1920, height: 1080, fps: 60 }) })
   }) });
   assert.equal(selected, 2);
   assert.match(formats[0], /PNG/); assert.match(formats[1], /MP4/);
+  assert.match(formats[0], /48x32$/); assert.match(formats[1], /1920x1080 · 60FPS$/);
+  assert.deepEqual(captionDetails, formats);
   assert.equal(path.extname(sent.uploadPath), ".mp4");
   assert.equal(sent.caption, "Caption ✨\nline two");
   assert.deepEqual(sentBytes, await readFile(video));

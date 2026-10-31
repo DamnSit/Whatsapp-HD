@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
 import { Jimp } from "jimp";
-import { inspectMedia, prepareStatusPayload } from "../src/status-media.js";
+import { formatMediaInfo, inspectMedia, prepareStatusPayload } from "../src/status-media.js";
 import { publishStatus } from "../src/status-publisher.js";
 import { imageFile, mp4, temporary, webp } from "./helpers.js";
 
@@ -14,6 +14,7 @@ for (const [ext, format] of [["jpg", "JPEG"], ["png", "PNG"]]) test(`detects and
   const file = await imageFile(await temporary(t), ext), original = await readFile(file);
   const media = await inspectMedia(file, { expectedKind: "image" });
   assert.equal(media.format, format); assert.equal(media.width, 48); assert.equal(media.height, 32);
+  assert.match(formatMediaInfo(media), / · 48x32$/); assert.doesNotMatch(formatMediaInfo(media), /FPS/);
   const payload = await prepareStatusPayload(media, " Caption ✨\nline two ");
   assert.equal(payload.content.image.url, file); assert.equal(payload.content.caption, " Caption ✨\nline two ");
   assert.deepEqual(await readFile(file), original);
@@ -34,9 +35,21 @@ test("WebP requires a preview decoder because existing Jimp codecs cannot decode
 for (const [brand, format, ext] of [["isom", "MP4", "mp4"], ["M4V ", "M4V", "m4v"]]) test(`validates ${format} ftyp brands and calls the video decoder`, async (t) => {
   const file = path.join(await temporary(t), "video." + ext); await writeFile(file, mp4(brand));
   let checked = false;
-  const media = await inspectMedia(file, { decodeVideo: async () => { checked = true; } });
+  const original = await readFile(file);
+  const media = await inspectMedia(file, { decodeVideo: async () => { checked = true; }, probeVideo: async (source) => {
+    assert.equal(source, file); return { width: 1920, height: 1080, fps: 60 };
+  } });
   assert.equal(media.format, format); assert.equal(checked, true);
+  assert.equal(media.width, 1920); assert.equal(media.height, 1080); assert.equal(media.fps, 60);
+  assert.match(formatMediaInfo(media), / · 1920x1080 · 60FPS$/);
+  assert.deepEqual(await readFile(file), original);
   const { content } = await prepareStatusPayload(media, "test"); assert.equal(content.video.url, file); assert.equal(content.mimetype, "video/mp4");
+});
+
+test("video summaries retain fractional FPS and show unavailable metadata explicitly", () => {
+  assert.equal(formatMediaInfo({ format: "MP4", kind: "video", size: 6.75 * 1024 * 1024, width: 1920, height: 1080, fps: 60000 / 1001 }), "MP4 · 6.75 MB · 1920x1080 · 59.94FPS");
+  assert.match(formatMediaInfo({ format: "MP4", kind: "video", size: 1024, width: 1080, height: 1920 }), /1080x1920 · FPS unavailable$/);
+  assert.doesNotMatch(formatMediaInfo({ format: "PNG", kind: "image", size: 1024, width: 1080, height: 1920, fps: 60 }), /FPS/);
 });
 
 test("rejects empty, unsupported, incomplete, mismatched media and decoder failures", async (t) => {

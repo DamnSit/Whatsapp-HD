@@ -4,7 +4,7 @@
 import { withPickedMedia } from "../android/file-picker.js";
 import { parseManualRecipients } from "../cli-options.js";
 import { audienceIndicator, resolveStatusRecipients } from "../status-audience.js";
-import { formatBytes } from "../status-media.js";
+import { formatMediaInfo } from "../status-media.js";
 import { errorMessage } from "../logger.js";
 
 export function uploadOptions(media, draft) {
@@ -17,8 +17,7 @@ export async function uploadScreen(ui, client, { pickMedia = withPickedMedia } =
   while (changeMedia && !ui.closed) {
     changeMedia = false;
     await ui.busy("Choose media · Android file picker", (signal) => pickMedia(undefined, async (media) => {
-      const mediaInfo = [`File: ${media.filename}`, `${media.format} · ${formatBytes(media.size)}`,
-        ...(media.width ? [`${media.width} × ${media.height}`] : [])];
+      const mediaInfo = [formatMediaInfo(media), `File: ${media.filename}`];
       draft.caption = (await ui.editCaption(draft.caption, "Add caption", mediaInfo)).value;
       while (!ui.closed) {
         const state = client.getState();
@@ -27,10 +26,9 @@ export async function uploadScreen(ui, client, { pickMedia = withPickedMedia } =
         try { recipients = resolveStatusRecipients({ manualRecipients: draft.recipients, statusPrivacy: state.privacy }); }
         catch (error) { audienceError = error.message; }
         const lines = [
+          formatMediaInfo(media),
           `File: ${media.filename}`,
           ...(!media.originalNameAvailable ? ["Temporary copy name; provider filename unavailable."] : []),
-          `Format: ${media.format} · Size: ${formatBytes(media.size)}`,
-          ...(media.width ? [`Resolution: ${media.width} × ${media.height}`] : []),
           `Audience: ${recipients ? `${recipients.length} recipients + sender` : "Not ready"}`,
           `Source: ${draft.recipients.length ? "MANUAL OVERRIDE" : "Synchronized audience"}`,
           ...(draft.recipients.length ? [draft.recipientInput] : [indicator.mode, ...(indicator.warning ? ["! " + indicator.warning] : [])]),

@@ -13,7 +13,7 @@ whatsapp-hd
 
 Use Node.js 20 or newer. Install the **Termux:API Android companion application** from a compatible source matching your Termux installation. `pkg install termux-api` installs the command-line package, not the Android app. ZeroTermux builds may supply their own API integration; verify `termux-storage-get` opens Android DocumentsUI in your build.
 
-FFmpeg is needed for WebP thumbnails and video decoding validation. It does not re-encode the uploaded source. JPEG/PNG decoding and their existing 32 px JPEG preview generation continue to use Jimp. No new npm or TUI dependency is required.
+FFmpeg is needed for WebP thumbnails and video decoding validation. Its package also supplies FFprobe for video resolution and average frame rate. It does not re-encode the uploaded source. JPEG/PNG decoding and their existing 32 px JPEG preview generation continue to use Jimp. No new npm or TUI dependency is required.
 
 The global command is `whatsapp-hd`. Run `npm install -g whatsapp-hd@latest` to update it; your session stays in the application data directory described below.
 
@@ -64,7 +64,7 @@ The TUI uses a single-line **PHONE NUMBER** field: **Enter** continues, **Ctrl+U
 ## Upload and caption workflow
 
 1. Choose **Upload Media** to select either an image or a video. Android's native document picker opens through `termux-storage-get`.
-2. Select media. The application validates the copied file's content and type, then shows its temporary filename, format, size, and image dimensions in the caption screen.
+2. Select media. The application validates the copied file's content and type, then shows its temporary filename and media summary in the caption and confirmation screens: for example, `MP4 · 6.75 MB · 1920x1080 · 60FPS` or `JPEG · 2.40 MB · 4000x3000`. Values come from the selected file; video FPS uses the average frame rate and retains fractional rates such as `59.94FPS`. Images show their source resolution.
 3. Enter a caption, save an empty caption, or skip it.
 4. Review the confirmation. Optionally choose **Manual Recipients** and enter comma-separated international numbers. The confirmation clearly labels this override; **Use Synced Audience** removes it for this upload.
 5. Use **Edit Caption**, **Clear Caption**, **Skip Caption**, or **Change Media** as needed. Editing returns to the same confirmation without selecting media again. Changing media retains the draft caption for further editing.

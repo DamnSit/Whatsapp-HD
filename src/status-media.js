@@ -5,7 +5,7 @@ import { open, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { Jimp, ResizeStrategy } from "jimp";
 import { detectSignature, validateImageContainer, validateVideo } from "./media-signatures.js";
-import { validateVideoFrames, webpPreview } from "./media-decoder.js";
+import { probeVideoMetadata, validateVideoFrames, webpPreview } from "./media-decoder.js";
 
 export function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -13,7 +13,15 @@ export function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-export async function inspectMedia(inputPath, { expectedKind, allowNoExtension = false, signal, decodeVideo = validateVideoFrames, decodeWebp = webpPreview } = {}) {
+export function formatMediaInfo(media) {
+  const parts = [media.format, formatBytes(media.size)];
+  if (media.width && media.height) parts.push(`${media.width}x${media.height}`);
+  else if (media.kind === "video") parts.push("Resolution unavailable");
+  if (media.kind === "video") parts.push(Number.isFinite(media.fps) && media.fps > 0 ? `${Number(media.fps.toFixed(2))}FPS` : "FPS unavailable");
+  return parts.join(" · ");
+}
+
+export async function inspectMedia(inputPath, { expectedKind, allowNoExtension = false, signal, decodeVideo = validateVideoFrames, probeVideo = probeVideoMetadata, decodeWebp = webpPreview } = {}) {
   if (!inputPath) throw new Error("--upload membutuhkan path file.");
 
   const file = path.resolve(inputPath);
@@ -24,7 +32,7 @@ export async function inspectMedia(inputPath, { expectedKind, allowNoExtension =
 
   const extension = path.extname(file).toLowerCase();
   const handle = await open(file, "r");
-  let detected, width, height;
+  let detected, width, height, fps;
   try {
     const header = Buffer.alloc(64);
     const { bytesRead } = await handle.read(header, 0, header.length, 0);
@@ -35,6 +43,7 @@ export async function inspectMedia(inputPath, { expectedKind, allowNoExtension =
       detected.format = await validateVideo(handle, info.size);
       if (detected.format === "M4V") detected.extension = ".m4v";
       await decodeVideo(file, { signal });
+      ({ width, height, fps } = await probeVideo(file, { signal }));
     } else {
       const bytes = await readFile(file);
       validateImageContainer(bytes, detected.format);
@@ -59,7 +68,7 @@ export async function inspectMedia(inputPath, { expectedKind, allowNoExtension =
     kind: detected.kind,
     format: detected.format,
     detectedExtension: detected.extension,
-    width, height
+    width, height, fps
   };
 }
 
