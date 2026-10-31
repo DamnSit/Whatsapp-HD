@@ -11,6 +11,6 @@ export function settingsLines(paths) {
     "ACCOUNT & STORAGE", `Data: ${paths.dataDir}`, `Auth: ${paths.authDir}`, `Audience: ${paths.audienceFile}`,
     "Exit closes this process and keeps your session. Logout unlinks WhatsApp, then clears credentials and the audience cache after remote success.",
     "AUDIENCE", "Automatic resolution supports Only share with… (ALLOW_LIST). Cached counts remain marked until a new privacy record arrives.",
-    "CLI", "node index.js --help", "--connect · --sync-audience · --upload PATH", "--caption TEXT · --to NUMBERS · --trace",
+    "CLI", "whatsapp-hd --help · source checkout: node index.js --help", "--connect · --sync-audience · --upload PATH", "--caption TEXT · --to NUMBERS · --trace",
     "Verify every upload in My Status and with selected recipients. A Message ID alone does not prove publication."];
 }

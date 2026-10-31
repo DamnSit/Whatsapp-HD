@@ -1,6 +1,6 @@
 # Validation — 31 October 2026
 
-The TUI implementation is available in this working tree. Global npm installation remains a separate phase.
+The TUI implementation is available in this working tree. The npm executable is `whatsapp-hd`; package and global-installation checks are documented below.
 
 ## Automated checks
 
@@ -13,6 +13,12 @@ The TUI implementation is available in this working tree. Global npm installatio
 The Android check used `$HOME/Whatsapp-HD` with a separate `WA_DATA_DIR`, so automated tests did not require a WhatsApp account. `src/status-publisher.js` and `package-lock.json` are unchanged. The publisher regression test checks normalized sender inclusion, recipient fan-out, original source paths and caption forwarding.
 
 Two additional storage regressions verify that restarting after successful logout cannot re-import preserved legacy credentials, including sessions migrated by an older version. The originals remain intact. Audience tests also verify that blank, boolean and malformed privacy modes cannot be interpreted as a valid ALLOW_LIST cache.
+
+## npm package validation
+
+The `whatsapp-hd@1.0.0` package exposes `whatsapp-hd` through its executable entry point. The package allowlist includes runtime JavaScript, README and validation notes. Jimp and its JavaScript dependency tree are bundled with the tested Zod fix; npm installs the remaining dependencies. Consumer installations do not inherit repository-level dependency overrides, and npm 12 no longer supports shrinkwrap files.
+
+A fresh consumer installation of the tarball on Windows, Node.js 24.22.1 and npm 12.2.0, ran `whatsapp-hd --help` outside the source checkout and reported **0 vulnerabilities**. The syntax check and all **50 tests** passed; the global-command help changes also passed the CLI tests. GitHub CI builds the package and checks an independent consumer installation and its audit. The source TUI has the Android validation recorded below; a fresh global installation in Termux is a separate user check.
 
 ## Unified Upload Media menu
 

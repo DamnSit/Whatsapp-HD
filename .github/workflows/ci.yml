@@ -34,3 +34,13 @@ jobs:
 
       - name: Verify CLI help
         run: node index.js --help
+
+      - name: Build npm package
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+
+      - name: Validate packaged installation and dependency audit
+        run: |
+          npm install --prefix "$RUNNER_TEMP/whatsapp-hd-consumer" "$RUNNER_TEMP"/whatsapp-hd-*.tgz
+          npm audit --prefix "$RUNNER_TEMP/whatsapp-hd-consumer"
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/whatsapp-hd-consumer/node_modules/.bin/whatsapp-hd" --help

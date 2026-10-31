@@ -6,18 +6,26 @@ An interactive terminal application for WhatsApp image/video Status, designed fo
 
 ```sh
 pkg update
-pkg install nodejs-lts git termux-api ffmpeg
-git clone https://github.com/DamnSit/Whatsapp-HD.git
-cd Whatsapp-HD
-npm ci
-node index.js
+pkg install nodejs-lts termux-api ffmpeg
+npm install -g whatsapp-hd
+whatsapp-hd
 ```
 
 Use Node.js 20 or newer. Install the **Termux:API Android companion application** from a compatible source matching your Termux installation. `pkg install termux-api` installs the command-line package, not the Android app. ZeroTermux builds may supply their own API integration; verify `termux-storage-get` opens Android DocumentsUI in your build.
 
 FFmpeg is needed for WebP thumbnails and video decoding validation. It does not re-encode the uploaded source. JPEG/PNG decoding and their existing 32 px JPEG preview generation continue to use Jimp. No new npm or TUI dependency is required.
 
-This project is still private. It has no global `bin` entry and is not being published to npm in this phase.
+The global command is `whatsapp-hd`. Run `npm install -g whatsapp-hd@latest` to update it; your session stays in the application data directory described below.
+
+To work from the source repository:
+
+```sh
+pkg install git
+git clone https://github.com/DamnSit/Whatsapp-HD.git
+cd Whatsapp-HD
+npm ci
+node index.js
+```
 
 ## Dashboard and controls
 
@@ -43,7 +51,7 @@ The dashboard uses a dark canvas, mint highlights, a compact status panel and nu
 Select **Connect / Reconnect WhatsApp**, or run:
 
 ```sh
-node index.js --connect
+whatsapp-hd --connect
 ```
 
 Enter your WhatsApp number, then enter the displayed pairing code in the official app: **Settings → Linked devices → Link a device → Link with phone number**. Indonesian local `08…` pairing numbers are converted to `628…`. Wait for the connected message. `--connect` directly starts the connection flow and never recursively opens the dashboard.
@@ -133,13 +141,13 @@ A private `.legacy-session-migrated` marker records migration in the application
 ## Existing CLI
 
 ```sh
-node index.js --help
-node index.js --connect
-node index.js --sync-audience
-node index.js --upload "/storage/emulated/0/Pictures/status.jpg"
-node index.js --upload "/storage/emulated/0/Download/video.mp4" --caption "Hello"
-node index.js --upload "/path/status.jpg" --to "628123456789,628987654321"
-node index.js --upload "/path/status.png" --caption "" --trace
+whatsapp-hd --help
+whatsapp-hd --connect
+whatsapp-hd --sync-audience
+whatsapp-hd --upload "/storage/emulated/0/Pictures/status.jpg"
+whatsapp-hd --upload "/storage/emulated/0/Download/video.mp4" --caption "Hello"
+whatsapp-hd --upload "/path/status.jpg" --to "628123456789,628987654321"
+whatsapp-hd --upload "/path/status.png" --caption "" --trace
 ```
 
 `--upload`, `--caption`, `--to`, `--sync-audience`, `--trace`, `--help` remain available. `--sync-audience` and upload commands finish and close the local connection. `--connect` keeps the connection running until you exit. CLI recipient parsing retains its existing behavior; use international digits for manual recipients.
@@ -173,4 +181,4 @@ The cross-platform syntax check covers nested source modules, scripts, and tests
 
 The implementation is separated into `src/tui/`, `src/android/`, `src/storage/`, and `src/account/`; the shared client lives in `src/whatsapp-client.js`. `src/status-publisher.js` remains the sole publishing implementation.
 
-See [on-device validation](docs/validation.md) for the tested environment and remaining live-account checks. npm global installation is a separate phase.
+The npm package includes the executable, runtime modules, README and validation notes. The JavaScript-only Jimp dependency tree is bundled with the tested Zod fix because dependency overrides from this repository do not apply when another project installs the package. npm installs the remaining dependencies automatically. Source tests and local validation artifacts stay in the repository/workspace. See [on-device validation](docs/validation.md) for the tested environment and remaining live-account checks.
