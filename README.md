@@ -7,7 +7,7 @@ An interactive terminal application for WhatsApp image/video Status, designed fo
 ```sh
 pkg update
 pkg install nodejs-lts termux-api ffmpeg
-npm install -g whatsapp-hd
+npm install -g whatsapp-hd@latest
 whatsapp-hd
 ```
 
