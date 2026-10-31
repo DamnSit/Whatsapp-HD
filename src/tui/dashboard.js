@@ -3,7 +3,7 @@
 
 import { audienceIndicator } from "../status-audience.js";
 
-export const MAIN_MENU = ["Upload Media", "Sync Status Audience", "Connect / Reconnect WhatsApp", "Account Management", "Settings / Help", "Exit"];
+export const MAIN_MENU = ["Upload Media", "Sync Status Audience", "Connect | Reconnect", "Account Management", "Settings | Help", "Exit"];
 
 export function dashboardLines(state) {
   const audience = audienceIndicator(state.privacy, state);

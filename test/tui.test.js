@@ -63,6 +63,41 @@ test("mobile wrapping preserves Unicode and fits terminal cells", () => {
   for (const line of wrap("日本語 👨‍👩‍👧‍👦 e\u0301 ".repeat(5), 12)) assert.ok(width(line) <= 12);
 });
 
+test("phone prompt restores pending progress messages and accepts a single line", async () => {
+  const streams = terminal(), ui = new TerminalUI({ ...streams, animate: false });
+  ui.start(); let complete;
+  const pending = ui.busy("Connect WhatsApp", () => new Promise((resolve) => { complete = resolve; }));
+  try {
+    ui.notify({ level: "info", message: "Connecting" });
+    const answer = ui.question("WhatsApp number:");
+    ui.notify({ level: "warn", message: "Connection interrupted" });
+    assert.match(ui.renderer.previous.join("\n"), /PHONE NUMBER/);
+    streams.input.emit("data", "081234567890\n");
+    assert.equal(await answer, "081234567890");
+    assert.match(ui.renderer.previous.join("\n"), /Connection interrupted/);
+    complete(); await pending;
+  } finally { complete(); ui.close(); await ui.stopPromise; }
+});
+
+test("pairing code stays in a dedicated panel despite logs and mobile resizing", async () => {
+  const streams = terminal(), ui = new TerminalUI({ ...streams, animate: false });
+  ui.start(); let complete;
+  const pending = ui.busy("Connect WhatsApp", () => new Promise((resolve) => { complete = resolve; }));
+  try {
+    ui.pairingCode = "ABCD1234";
+    for (let i = 0; i < 12; i++) ui.notify({ level: "info", message: `Update ${i}` });
+    for (const [columns, rows] of [[26, 10], [32, 14], [40, 20], [80, 30]]) {
+      Object.assign(streams.output, { columns, rows }); streams.output.emit("resize");
+      assert.match(ui.renderer.previous.join("\n"), /ABCD-1234/);
+      assert.equal(ui.renderer.previous.length, rows);
+      for (const row of ui.renderer.previous) assert.ok(width(row) <= columns);
+    }
+    ui.pairingCode = null; ui.render();
+    assert.doesNotMatch(ui.renderer.previous.join("\n"), /ABCD-1234/);
+    complete(); await pending;
+  } finally { complete(); ui.close(); await ui.stopPromise; }
+});
+
 test("exit releases initially idle stdin without pausing an existing input consumer", () => {
   for (const flowing of [null, true]) {
     const { input, output } = terminal(); let paused = false;
@@ -80,6 +115,17 @@ test("confirmation edits/clear survive backwards navigation and forward the fina
   const client = { getState: () => ({ privacy: { mode: 0, userJid: ["62812345678@s.whatsapp.net"] } }), upload: async (options) => { sent = options; return { key: { id: "mock" } }; } };
   await uploadScreen(ui, client, { pickMedia: async (_kind, use) => { picked++; return use({ file: "original.png", filename: "original.png", format: "PNG", size: 123, originalNameAvailable: true }); } });
   assert.equal(picked, 1); assert.equal(sent.caption, "  final ✨\nline two  "); assert.equal(sent.uploadPath, "original.png");
+});
+
+test("manual recipient input preserves the caption and cancelling an edit preserves the override", async () => {
+  const choices = [4, 4, 0], edits = [{ value: "628234567890" }, { value: "", skipped: true }];
+  let sent;
+  const ui = { closed: false, busy: async (_title, fn) => fn(), editCaption: async () => ({ value: "Caption ✨" }),
+    editText: async (value) => { if (edits.length === 1) assert.equal(value, "628234567890"); return edits.shift(); },
+    menu: async () => choices.shift(), message: async () => {} };
+  const client = { getState: () => ({ privacy: { mode: 0, userJid: ["62812345678@s.whatsapp.net"] } }), upload: async (options) => { sent = options; } };
+  await uploadScreen(ui, client, { pickMedia: async (_kind, use) => use({ file: "source.png", filename: "source.png", format: "PNG", size: 123, originalNameAvailable: true }) });
+  assert.equal(sent.caption, "Caption ✨"); assert.deepEqual(sent.recipients, ["628234567890@s.whatsapp.net"]);
 });
 
 test("Upload Media can change from image to video while preserving the caption and source bytes", async (t) => {

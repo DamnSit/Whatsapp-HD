@@ -23,18 +23,28 @@ export async function createWhatsAppClient({ paths, options = {}, question,
   let socket, handlers, reconnectTimer, starting, connecting, resolveConnection, rejectConnection, connectTimer;
   let stopped = false, intentionalLogout = false, remoteLoggedOut = false, logoutPromise, syncPromise, uploadPromise;
   let generation = 0, privacyRevision = 0;
+  let pairingNumber, lastConnectionError;
   let writes = Promise.resolve();
   let logoutEvent;
   let logoutCompleted = false;
-  const state = { connection: "Disconnected", session: await exists(path.join(paths.authDir, "creds.json")) ? "Saved session" : "Pairing required", account: null, privacy: null, fresh: false, sync: "Not synchronized", warning: "" };
+  const state = { connection: "Disconnected", session: await exists(path.join(paths.authDir, "creds.json")) ? "Saved session" : "Pairing required", account: null, pairingCode: null, privacy: null, fresh: false, sync: "Not synchronized", warning: "" };
   try { state.privacy = await loadStatusAudience(paths.audienceFile); }
   catch (error) { state.warning = "Cache unavailable: " + errorMessage(error); }
   if (state.privacy) state.sync = "Cached — refresh required";
   function emit(patch = {}) { Object.assign(state, patch); onState({ ...state }); }
   function failConnection(error) {
     clearTimeout(connectTimer);
+    connectTimer = undefined;
     rejectConnection?.(error);
     connecting = resolveConnection = rejectConnection = undefined;
+  }
+  function armConnectionTimeout() {
+    if (!connecting || connectTimer) return;
+    connectTimer = setTimeout(() => {
+      const detail = lastConnectionError ? " Last connection error: " + errorMessage(lastConnectionError) : "";
+      failConnection(new Error("Connection timed out. Check your network and retry Connect." + detail));
+      void closeLocal().then(() => emit({ connection: "Disconnected" }));
+    }, dependencies.connectTimeout ?? 180000);
   }
   function enqueueWrite(operation) {
     writes = writes.then(operation).catch((error) => {
@@ -54,6 +64,7 @@ export async function createWhatsAppClient({ paths, options = {}, question,
     detach();
     try { socket?.end?.(new Error("Local application stopped")); } catch { /* best effort */ }
     socket = undefined;
+    emit({ pairingCode: null });
     failConnection(new Error("Connection closed."));
     await writes;
   }
@@ -65,6 +76,16 @@ export async function createWhatsAppClient({ paths, options = {}, question,
       await privateDirectory(paths.authDir);
       const { state: auth, saveCreds } = await authState(paths.authDir);
       if (stopped || intentionalLogout || current !== generation) return;
+      if (!auth.creds.registered && !pairingNumber) {
+        if (!question) throw new Error("Pairing requires an interactive phone-number prompt.");
+        report.info(PAIRING_HINT);
+        emit({ connection: "Pairing" });
+        pairingNumber = normalizePhoneNumber(await question("WhatsApp number (international format / 0812…):"));
+        if (stopped || intentionalLogout || current !== generation) return;
+      }
+      armConnectionTimeout();
+      emit({ connection: "Connecting" });
+      report.info("Connecting to WhatsApp…");
       const writeKeys = auth.keys?.set?.bind(auth.keys);
       if (writeKeys) auth.keys.set = (data) => {
         if (stopped || intentionalLogout || current !== generation) return Promise.resolve();
@@ -73,6 +94,7 @@ export async function createWhatsAppClient({ paths, options = {}, question,
       const active = makeSocket({ auth, logger, makeSignalRepository: makeVerifiedSignalRepository, markOnlineOnConnect: false, connectTimeoutMs: 60000, defaultQueryTimeoutMs: 60000 });
       socket = active;
       const live = () => !stopped && current === generation;
+      let pairingRequested = false;
       handlers = {
         "creds.update": () => { if (live() && !intentionalLogout) void enqueueWrite(saveCreds); },
         "settings.update": (update) => {
@@ -88,24 +110,52 @@ export async function createWhatsAppClient({ paths, options = {}, question,
           void enqueueWrite(() => saveStatusAudience(paths.audienceFile, privacy));
           report.info(`Status audience synchronized: ${privacy.userJid.length} unique recipient JIDs; ${privacy.invalidCount} invalid ignored.`);
         },
-        "connection.update": ({ connection, lastDisconnect }) => {
+        "connection.update": ({ connection, lastDisconnect, qr }) => {
           if (!live()) return;
+          if (qr && !auth.creds.registered && !pairingRequested && !intentionalLogout) {
+            pairingRequested = true;
+            report.info("Connection ready. Requesting pairing code…");
+            void (async () => {
+              const code = await active.requestPairingCode(pairingNumber);
+              if (live() && !intentionalLogout) {
+                emit({ pairingCode: code });
+                report.success("Pairing code: " + code + " — WhatsApp → Linked devices → Link with phone number");
+                report.info("Enter the code in WhatsApp. Keep Termux open in split-screen while pairing.");
+              }
+            })().catch(async (error) => {
+              if (!live() || intentionalLogout) return;
+              failConnection(error);
+              await closeLocal();
+              emit({ connection: "Disconnected" });
+            });
+          }
           if (connection === "connecting") emit({ connection: "Connecting" });
           if (connection === "open") {
-            emit({ connection: "Connected", session: "Linked", account: active.user?.id || null });
+            emit({ connection: "Connected", session: "Linked", account: active.user?.id || null, pairingCode: null });
             clearTimeout(connectTimer);
+            connectTimer = undefined;
+            lastConnectionError = undefined;
             resolveConnection?.();
             connecting = resolveConnection = rejectConnection = undefined;
             report.success("WhatsApp terhubung.");
           }
           if (connection !== "close") return;
           const status = lastDisconnect?.error?.output?.statusCode;
-          emit({ connection: "Disconnected", fresh: false, sync: state.privacy ? "Cached — connection closed" : "Not synchronized" });
+          lastConnectionError = lastDisconnect?.error;
+          emit({ connection: "Disconnected", pairingCode: null, fresh: false, sync: state.privacy ? "Cached — connection closed" : "Not synchronized" });
           if (status === DisconnectReason.loggedOut) {
             remoteLoggedOut = true;
             emit({ session: "Logged out remotely" });
             logoutEvent?.();
             failConnection(new Error("WhatsApp session is logged out. Pair again through Linked devices."));
+            return;
+          }
+          if ([400, DisconnectReason.forbidden, DisconnectReason.multideviceMismatch, DisconnectReason.connectionReplaced, DisconnectReason.badSession].includes(status)) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = undefined;
+            const failure = new Error("WhatsApp rejected the connection: " + errorMessage(lastConnectionError));
+            failConnection(failure);
+            report.error(failure.message);
             return;
           }
           if (!intentionalLogout && !stopped && !reconnectTimer) {
@@ -118,15 +168,7 @@ export async function createWhatsAppClient({ paths, options = {}, question,
         }
       };
       for (const [event, handler] of Object.entries(handlers)) active.ev.on(event, handler);
-      if (!auth.creds.registered) {
-        if (!question) throw new Error("Pairing requires an interactive phone-number prompt.");
-        report.info(PAIRING_HINT);
-        const number = normalizePhoneNumber(await question("WhatsApp number (international format / 0812…):"));
-        await new Promise((resolve) => setTimeout(resolve, dependencies.pairingDelay ?? 1000));
-        if (!live() || intentionalLogout) return;
-        const code = await active.requestPairingCode(number);
-        if (live()) report.success("Pairing code: " + code + " — WhatsApp → Linked devices → Link with phone number");
-      } else report.info("Sesi tersimpan ditemukan.");
+      if (auth.creds.registered) report.info("Sesi tersimpan ditemukan.");
     })();
     try { await starting; } finally { starting = undefined; }
   }
@@ -137,14 +179,12 @@ export async function createWhatsAppClient({ paths, options = {}, question,
     if (connecting) return connecting;
     if (remoteLoggedOut) return Promise.reject(new Error("Session logged out. Use Account Management → Logout to clear this confirmed logged-out session, then pair again."));
     logoutCompleted = false;
+    pairingNumber = undefined;
+    lastConnectionError = undefined;
     connecting = new Promise((resolve, reject) => { resolveConnection = resolve; rejectConnection = reject; });
     const result = connecting;
     clearTimeout(reconnectTimer);
     reconnectTimer = undefined;
-    connectTimer = setTimeout(() => {
-      failConnection(new Error("Connection timed out. Check your network and retry Connect."));
-      void closeLocal().then(() => emit({ connection: "Disconnected" }));
-    }, dependencies.connectTimeout ?? 180000);
     emit({ connection: "Connecting" });
     void startSocket().catch(async (error) => { failConnection(error); await closeLocal(); emit({ connection: "Disconnected" }); });
     return result;
@@ -156,12 +196,14 @@ export async function createWhatsAppClient({ paths, options = {}, question,
       const revision = privacyRevision;
       const active = socket;
       emit({ sync: "Synchronizing…", fresh: false, warning: "" });
+      report.info("WhatsApp connected. Synchronizing Status audience…");
       try {
         if (typeof active.resyncAppState !== "function") throw new Error("Baileys does not provide resyncAppState.");
         await active.resyncAppState(["regular_high"], false);
         await writes;
         if (active !== socket || intentionalLogout || stopped) throw new Error("Connection changed during synchronization.");
         if (privacyRevision === revision) emit({ fresh: false, sync: "No new privacy record", warning: 'No fresh Status privacy record received. Save "Only share with…" in WhatsApp and sync again.' });
+        if (state.warning) report.warn(state.warning);
         return state.privacy;
       } catch (error) {
         emit({ fresh: false, sync: "Synchronization failed", warning: errorMessage(error) });

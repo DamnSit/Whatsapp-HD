@@ -1,6 +1,16 @@
-# Validation — 31 October 2026
+# Validation — 1 November 2026
 
 The TUI implementation is available in this working tree. The npm executable is `whatsapp-hd`; package and global-installation checks are documented below.
+
+## Version 1.0.3 pairing and TUI validation
+
+The phone's published 1.0.2 TUI showed the phone-number prompt as a multiline CAPTION editor, then waited without useful progress until its 180-second connection timeout. Source inspection confirmed that the socket and timeout started before phone entry, pairing used a fixed one-second delay instead of connection readiness, and messages received during input could be absent from the restored busy screen. These are reproduced lifecycle/UI defects; the original phone disconnect reason remains unknown.
+
+Version 1.0.3 collects the number before opening a socket, starts the timeout afterwards, requests a pairing code on Baileys' ready/QR event, and retries with the entered number without another prompt. Terminal connection rejections fail immediately; timeouts retain the last disconnect reason. Signature verification remains enforced. Connection and audience synchronization have separate progress screens.
+
+Phone and manual-recipient fields use single-line input; captions retain multiline Unicode editing. Pairing codes appear in a persistent centered panel with bold contrasting colors, including at 26 columns × 10 rows and in split-screen layouts, and disappear on connection or disconnection. The extra dashboard sentence about synced JIDs was removed; audience counts retain their existing meaning and calculation. Menu labels are **03 Connect | Reconnect** and **05 Settings | Help**.
+
+The syntax check, all **64 tests**, CLI help and audit passed on Windows; the audit reported **0 vulnerabilities**, with dependencies unchanged. A live PC handshake using temporary in-memory credentials passed strict certificate verification and reached pairing readiness without requesting a code, linking an account or publishing Status. Full pairing and these changes still require Termux validation. The preview uses a sample code.
 
 ## Automated checks
 

@@ -20,6 +20,7 @@ export class TerminalUI {
     animate = process.env.WA_REDUCED_MOTION !== "1" && process.env.TERM !== "dumb", now = () => performance.now() } = {}) {
     this.renderer = new Renderer(input, output); this.input = input; this.output = output;
     this.version = version; this.onExit = onExit; this.closed = false; this.logs = [];
+    this.pairingCode = null;
     this.animate = animate; this.now = now; this.frame = 0; this.screenStartedAt = now();
     this.controller = new AbortController(); this.signal = this.controller.signal;
     this.decoder = new InputDecoder((key) => { try { this.handle(key); } catch (error) { this.close(error); } });
@@ -47,7 +48,7 @@ export class TerminalUI {
   notify({ level, message }) {
     this.logs.push(`${level.toUpperCase()}: ${message}`);
     this.logs = this.logs.slice(-8);
-    if (this.screen?.busy) { this.screen.lines = this.logs; this.render(); }
+    if (this.screen?.busy) this.render();
   }
   stopMotion() { clearInterval(this.animationTimer); this.animationTimer = undefined; }
   startMotion() {
@@ -115,30 +116,42 @@ export class TerminalUI {
       const marked = before + "▏" + chars.slice(editor.cursor).join("");
       const details = detailRows(r, this.screen.details || [], columns).slice(0, Math.max(0, capacity - 5));
       if (details.length) details.push("");
-      const fieldRows = Math.max(1, capacity - details.length - 2);
+      const fieldRows = editor.multiline ? Math.max(1, capacity - details.length - 3) : 1;
       const inner = columns - 4;
       content = wrap(marked, inner);
       const caretLine = wrap(before + "▏", inner).length - 1;
       const offset = Math.max(0, caretLine - fieldRows + 1);
       const field = editor.value ? content.slice(offset, offset + fieldRows).map((line) => tint(r, line))
-        : [tint(r, "▏", "mint", true) + tint(r, fit(" Write your caption…", inner - 1), "muted")];
+        : [tint(r, "▏", "mint", true) + tint(r, fit(" " + this.screen.placeholder, inner - 1), "muted")];
       while (field.length < fieldRows) field.push("");
-      content = [...details, ...panel(r, "CAPTION", field, columns)];
-      footer = "Enter Save · Ctrl+J Newline";
-      secondary = "Ctrl+U Clear · Esc Skip";
+      content = [...details, ...panel(r, this.screen.label, field, columns)];
+      footer = `Enter ${this.screen.submit}` + (editor.multiline ? " · Ctrl+J Newline" : "");
+      secondary = `Ctrl+U Clear · Esc ${this.screen.cancel}`;
     } else {
       const source = typeof this.screen.lines === "function" ? this.screen.lines() : this.screen.lines;
       if (this.screen.busy) {
-        const trackWidth = Math.max(6, Math.min(24, columns - 8)), travel = trackWidth - 4;
-        const position = this.frame % (travel * 2), start = position <= travel ? position : travel * 2 - position;
-        const track = Array.from({ length: trackWidth }, (_, i) => tint(r, "━", i >= start && i < start + 4 ? "mint" : "border")).join("");
-        const timer = `${Math.floor(elapsed / 1000)}s`;
-        const activity = tint(r, `${spinner}  Processing`, "mint", true);
-        content = panel(r, "IN PROGRESS", [padded(activity, columns - 4 - timer.length) + tint(r, timer, "muted"), "", track], columns);
-        const available = Math.max(0, capacity - content.length - 1);
-        if (available) content.push("", ...detailRows(r, source, columns).slice(-available));
-        footer = this.screen.cancel ? "Esc Cancel · Q Exit" : "Q Exit";
-        secondary = "Ctrl+C Exit";
+        if (this.pairingCode) {
+          const code = this.pairingCode.replace(/^(.{4})(.{4})$/, "$1-$2");
+          const inner = columns - 4;
+          const highlighted = r.style(` ${code} `, "1;38;2;9;18;24;48;2;83;229;190");
+          const centered = " ".repeat(Math.max(0, Math.floor((inner - width(highlighted)) / 2))) + highlighted;
+          content = panel(r, "PAIRING CODE", capacity >= 10 ? ["", centered, ""] : [centered], columns, "mint");
+          const instructions = ["Enter this code in WhatsApp:", "Linked devices → Link with phone number", "Keep Termux + WhatsApp in split-screen."];
+          content.push("", ...detailRows(r, instructions, columns).slice(0, Math.max(0, capacity - content.length - 1)));
+          footer = "Waiting for WhatsApp pairing…";
+          secondary = "Q / Ctrl+C Exit";
+        } else {
+          const trackWidth = Math.max(6, Math.min(24, columns - 8)), travel = trackWidth - 4;
+          const position = this.frame % (travel * 2), start = position <= travel ? position : travel * 2 - position;
+          const track = Array.from({ length: trackWidth }, (_, i) => tint(r, "━", i >= start && i < start + 4 ? "mint" : "border")).join("");
+          const timer = `${Math.floor(elapsed / 1000)}s`;
+          const activity = tint(r, `${spinner}  Processing`, "mint", true);
+          content = panel(r, "IN PROGRESS", [padded(activity, columns - 4 - timer.length) + tint(r, timer, "muted"), "", track], columns);
+          const available = Math.max(0, capacity - content.length - 1);
+          if (available) content.push("", ...detailRows(r, source, columns).slice(-available));
+          footer = this.screen.cancel ? "Esc Cancel · Q Exit" : "Q Exit";
+          secondary = "Ctrl+C Exit";
+        }
       }
       else {
         const dashboard = Boolean(this.screen.dashboardState);
@@ -150,7 +163,6 @@ export class TerminalUI {
           starts.push(content.length);
           content.push(line);
         });
-        if (dashboard) content.push("", ...wrap("Counts = synced JIDs, not phone contacts.", columns).map((line) => tint(r, line, "muted")));
         let scroll = this.screen.scroll;
         const focused = starts[this.screen.selected] ?? 0;
         if (this.screen.focus) {
@@ -175,24 +187,28 @@ export class TerminalUI {
   }
   message(title, lines) { return this.menu(title, lines, ["Back"]); }
   editCaption(value = "", title = "Caption", details = []) {
+    return this.editText(value, { title, details, label: "CAPTION", placeholder: "Write your caption…", multiline: true, submit: "Save", cancel: "Skip" });
+  }
+  editText(value = "", { title = "Input", details = [], label = "INPUT", placeholder = "Enter text…", multiline = false, submit = "Continue", cancel = "Cancel" } = {}) {
     if (this.closed) return Promise.resolve({ value: "", skipped: true });
-    this.setScreen({ title, details, editor: new CaptionEditor(value) });
+    this.setScreen({ title, details, label, placeholder, submit, cancel, editor: new CaptionEditor(value, { multiline }) });
     return new Promise((resolve) => { this.finish = (result) => resolve(result || { value: "", skipped: true }); this.render(); });
   }
   async question(prompt) {
     const previous = this.screen;
+    const startedAt = this.screenStartedAt;
     try {
-      const result = await this.editCaption("", "Pair WhatsApp", [PAIRING_HINT, prompt]);
+      const result = await this.editText("", { title: "Pair WhatsApp", details: [PAIRING_HINT, prompt], label: "PHONE NUMBER", placeholder: "0812… / 62812…" });
       if (result.skipped || this.closed) throw new Error("Pairing cancelled.");
       return result.value;
-    } finally { this.setScreen(previous); this.render(); }
+    } finally { this.setScreen(previous); if (previous?.busy) this.screenStartedAt = startedAt; this.render(); }
   }
   async busy(title, operation, { cancellable = false, lines = ["Please wait…"] } = {}) {
     if (this.closed) throw new DOMException("Application closed", "AbortError");
     const controller = new AbortController();
     const onAbort = () => controller.abort();
     this.signal.addEventListener("abort", onAbort, { once: true });
-    this.logs = []; this.setScreen({ title, busy: true, lines, ...(cancellable ? { cancel: () => controller.abort() } : {}) }); this.render();
+    this.logs = []; this.setScreen({ title, busy: true, lines: () => this.logs.length ? this.logs : lines, ...(cancellable ? { cancel: () => controller.abort() } : {}) }); this.render();
     const busyScreen = this.screen;
     try { return await operation(controller.signal); }
     catch (error) {
@@ -213,7 +229,7 @@ export async function runTui({ input, output, createClient = createWhatsAppClien
     ui.start();
     setLogSink((entry) => ui.notify(entry));
     const paths = await initializeStorage();
-    client = await createClient({ paths, question: (prompt) => ui.question(prompt), onState: () => ui.render() });
+    client = await createClient({ paths, question: (prompt) => ui.question(prompt), onState: (state) => { ui.pairingCode = state.pairingCode; ui.render(); } });
     if (ui.closed) { await client.stop(); return; }
     if (paths.notices.length) await ui.message("Session preserved", paths.notices);
     let selection = 0;
@@ -224,9 +240,13 @@ export async function runTui({ input, output, createClient = createWhatsAppClien
       try {
         if (choice === 0) await uploadScreen(ui, client);
         if (choice === 1) { await ui.busy("Sync Status Audience", () => client.syncAudience()); await ui.message("Audience synchronization", dashboardLines(client.getState())); }
-        if (choice === 2) { await ui.busy("Connect WhatsApp", async () => { await client.connect(); await client.syncAudience(); }); await ui.message("Connection", dashboardLines(client.getState())); }
+        if (choice === 2) {
+          await ui.busy("Connect WhatsApp", () => client.connect(), { lines: ["Opening WhatsApp connection…"] });
+          await ui.busy("Sync Status Audience", () => client.syncAudience(), { lines: ["WhatsApp connected. Synchronizing Status audience…"] });
+          await ui.message("Connection", dashboardLines(client.getState()));
+        }
         if (choice === 3) await accountScreen(ui, client);
-        if (choice === 4) await ui.message("Settings / Help", settingsLines(paths));
+        if (choice === 4) await ui.message("Settings | Help", settingsLines(paths));
         if (choice === 5) ui.close();
       } catch (error) { if (!ui.closed) await ui.message("Unable to complete action", [error.message]); }
     }

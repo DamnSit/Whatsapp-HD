@@ -35,3 +35,15 @@ test("unsupported escape commands are never stored in a caption", () => {
   input.feed("hello\x1b[99~world\x1b]0;title\x07"); input.close();
   assert.equal(editor.value, "helloworld");
 });
+
+test("single-line input flattens pasted newlines and accepts Android LF as submit", () => {
+  const editor = new CaptionEditor("0812\n3456", { multiline: false });
+  assert.equal(editor.value, "0812 3456");
+  const input = new InputDecoder((key) => editor.handle(key));
+  input.feed("\x1b[200~90\r\n12\t34\x1b[201~");
+  assert.equal(editor.value, "0812 345690 12 34");
+  assert.deepEqual(editor.handle({ name: "newline" }), { done: true, value: editor.value });
+  input.close();
+  const caption = new CaptionEditor("line one"); caption.handle({ name: "newline" });
+  assert.equal(caption.value, "line one\n");
+});

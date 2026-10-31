@@ -32,7 +32,7 @@ node index.js
 
 Launching without arguments opens the dashboard, showing application version, connection, privacy mode, numeric Status Audience, validation, synchronization state, and last successful sync time. Opening the dashboard alone does not start pairing.
 
-Menu: **Upload Media**, **Sync Status Audience**, **Connect / Reconnect WhatsApp**, **Account Management**, **Settings / Help**, **Exit**.
+Menu: **Upload Media**, **Sync Status Audience**, **Connect | Reconnect**, **Account Management**, **Settings | Help**, **Exit**.
 
 | Control | Action |
 | --- | --- |
@@ -49,7 +49,7 @@ The dashboard uses a dark canvas, mint highlights, a compact status panel and nu
 
 ## Pair WhatsApp
 
-Select **Connect / Reconnect WhatsApp**, or run:
+Select **Connect | Reconnect**, or run:
 
 ```sh
 whatsapp-hd --connect
@@ -58,6 +58,8 @@ whatsapp-hd --connect
 **Important:** Android split-screen is recommended during pairing. Keep **Termux and WhatsApp open side by side** so the pairing code remains visible while you enter it in WhatsApp. The pairing prompt and CLI display this reminder.
 
 Enter your WhatsApp number, then enter the displayed pairing code in the official app: **Settings → Linked devices → Link a device → Link with phone number**. Indonesian local `08…` pairing numbers are converted to `628…`. Wait for the connected message. `--connect` directly starts the connection flow and never recursively opens the dashboard.
+
+The TUI uses a single-line **PHONE NUMBER** field: **Enter** continues, **Ctrl+U** clears and **Esc** cancels. Its pairing code stays centered in a highlighted **PAIRING CODE** panel until the connection succeeds or closes. The connection timeout starts after phone entry. See [validation notes](docs/validation.md) for the checks and remaining Termux validation.
 
 ## Upload and caption workflow
 

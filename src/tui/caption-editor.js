@@ -7,10 +7,14 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 export const graphemes = (text) => Array.from(segmenter.segment(text), (entry) => entry.segment);
 
 export class CaptionEditor {
-  constructor(value = "") { this.value = cleanText(value); this.cursor = graphemes(this.value).length; }
+  constructor(value = "", { multiline = true } = {}) {
+    this.multiline = multiline;
+    this.value = this.clean(value); this.cursor = graphemes(this.value).length;
+  }
+  clean(value) { return this.multiline ? cleanText(value) : cleanText(value).replace(/[\n\t]/g, " "); }
   handle(key) {
     const chars = graphemes(this.value);
-    if (key.name === "enter") return { done: true, value: this.value };
+    if (key.name === "enter" || (!this.multiline && key.name === "newline")) return { done: true, value: this.value };
     if (key.name === "escape") return { done: true, value: "", skipped: true };
     if (key.name === "clear") { this.value = ""; this.cursor = 0; return; }
     if (key.name === "left") this.cursor = Math.max(0, this.cursor - 1);
@@ -33,7 +37,7 @@ export class CaptionEditor {
     if (key.name === "backspace" && this.cursor > 0) chars.splice(--this.cursor, 1);
     if (key.name === "delete") chars.splice(this.cursor, 1);
     if (["text", "newline", "tab"].includes(key.name)) {
-      const text = cleanText(key.name === "newline" ? "\n" : key.name === "tab" ? "\t" : key.text);
+      const text = this.clean(key.name === "newline" ? "\n" : key.name === "tab" ? "\t" : key.text);
       const before = chars.slice(0, this.cursor).join("") + text;
       this.value = before + chars.slice(this.cursor).join("");
       this.cursor = graphemes(before).length;

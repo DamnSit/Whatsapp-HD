@@ -43,7 +43,7 @@ export async function uploadScreen(ui, client, { pickMedia = withPickedMedia } =
         if (action === 1) draft.caption = (await ui.editCaption(draft.caption, "Edit caption", mediaInfo)).value;
         if (action === 2 || action === 3) draft.caption = "";
         if (action === 4) {
-          const result = await ui.editCaption(draft.recipientInput, "Manual recipients", ["International numbers separated by commas.", "This overrides the synced audience for this upload only."]);
+          const result = await ui.editText(draft.recipientInput, { title: "Manual recipients", label: "RECIPIENT NUMBERS", placeholder: "62812…, 62813…", details: ["International numbers separated by commas.", "This overrides the synced audience for this upload only."] });
           if (!result.skipped) {
             try { const parsed = parseManualRecipients(result.value); draft.recipients = parsed; draft.recipientInput = result.value; }
             catch (error) { await ui.message("Invalid recipient", [error.message, "Use international numbers separated by commas."]); }

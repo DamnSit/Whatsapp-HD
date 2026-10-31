@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-hd",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "license": "GPL-3.0-only OR AGPL-3.0-only",
   "author": "XurXuo (DamnSit)",
   "type": "module",
@@ -28,7 +28,13 @@
   "bugs": {
     "url": "https://github.com/DamnSit/Whatsapp-HD/issues"
   },
-  "keywords": ["whatsapp", "termux", "tui", "status", "cli"],
+  "keywords": [
+    "whatsapp",
+    "termux",
+    "tui",
+    "status",
+    "cli"
+  ],
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -49,7 +55,9 @@
     "jimp": "1.6.1",
     "pino": "^9.6.0"
   },
-  "bundleDependencies": ["jimp"],
+  "bundleDependencies": [
+    "jimp"
+  ],
   "allowScripts": {
     "@whiskeysockets/baileys@7.0.0-rc14": true,
     "protobufjs@7.6.6": true
