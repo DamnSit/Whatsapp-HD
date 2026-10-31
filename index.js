@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { parseCliOptions, usageText } from "./src/cli-options.js";

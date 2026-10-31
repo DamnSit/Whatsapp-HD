@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 // Optional integration check: run in Termux after installing FFmpeg.
 // All media is synthetic; no WhatsApp connection or account is used.
 import assert from "node:assert/strict";

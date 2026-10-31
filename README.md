@@ -183,3 +183,11 @@ The cross-platform syntax check covers nested source modules, scripts, and tests
 The implementation is separated into `src/tui/`, `src/android/`, `src/storage/`, and `src/account/`; the shared client lives in `src/whatsapp-client.js`. `src/status-publisher.js` remains the sole publishing implementation.
 
 The npm package includes the executable, runtime modules, README and validation notes. The JavaScript-only Jimp dependency tree is bundled with the tested Zod fix because dependency overrides from this repository do not apply when another project installs the package. npm installs the remaining dependencies automatically. Source tests and local validation artifacts stay in the repository/workspace. See [on-device validation](docs/validation.md) for the tested environment and remaining live-account checks.
+
+## License and attribution
+
+Copyright (C) 2026 **XurXuo (DamnSit)**. The original project code is licensed under **GNU GPLv3 only** (`GPL-3.0-only`); see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+When distributing copies or modified versions, preserve the applicable original copyright and license notices, including the author's name in those notices. Modified versions must identify their changes and dates and comply with GPLv3's source-code and licensing requirements. These notice-preservation obligations concern redistribution; GPLv3 does not impose a blanket ban on editing every name or UI credit. Third-party dependencies retain their own licenses and notices.
+
+This program is provided without warranty as set out in GPLv3.

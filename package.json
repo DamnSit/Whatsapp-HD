@@ -1,6 +1,8 @@
 {
   "name": "whatsapp-hd",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "license": "GPL-3.0-only",
+  "author": "XurXuo (DamnSit)",
   "type": "module",
   "packageManager": "npm@12.2.0",
   "description": "Interactive Termux dashboard and CLI for WhatsApp image/video Status with Baileys",
@@ -10,6 +12,8 @@
   "files": [
     "index.js",
     "src/**/*.js",
+    "LICENSE",
+    "NOTICE",
     "docs/validation.md"
   ],
   "repository": {

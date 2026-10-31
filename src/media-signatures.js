@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 // Container validation is independent of filenames and does not modify bytes.
 export function detectSignature(header) {
   if (header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) return { format: "JPEG", kind: "image", extension: ".jpg", extensions: [".jpg", ".jpeg"] };

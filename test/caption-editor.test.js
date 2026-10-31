@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { CaptionEditor } from "../src/tui/caption-editor.js";

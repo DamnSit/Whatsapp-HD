@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import { withPickedMedia } from "../android/file-picker.js";
 import { parseManualRecipients } from "../cli-options.js";
 import { audienceIndicator, resolveStatusRecipients } from "../status-audience.js";

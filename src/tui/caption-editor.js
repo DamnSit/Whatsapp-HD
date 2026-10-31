@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import { cleanText } from "./navigation.js";
 
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });

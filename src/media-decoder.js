@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import { spawn } from "node:child_process";
 
 export function runFfmpeg(args, { spawnProcess = spawn, signal } = {}) {

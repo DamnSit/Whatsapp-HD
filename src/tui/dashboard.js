@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import { audienceIndicator } from "../status-audience.js";
 
 export const MAIN_MENU = ["Upload Media", "Sync Status Audience", "Connect / Reconnect WhatsApp", "Account Management", "Settings / Help", "Exit"];

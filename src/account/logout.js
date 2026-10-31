@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import { lstat, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";

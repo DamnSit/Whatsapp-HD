@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import { StringDecoder } from "node:string_decoder";
 import { stripVTControlCharacters } from "node:util";
 

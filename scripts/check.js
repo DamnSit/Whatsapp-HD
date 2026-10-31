@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import { readdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 

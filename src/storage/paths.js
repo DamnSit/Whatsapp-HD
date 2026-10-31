@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

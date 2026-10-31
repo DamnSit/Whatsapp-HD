@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import { fit, width, wrap } from "./renderer.js";
 import { audienceIndicator } from "../status-audience.js";
 

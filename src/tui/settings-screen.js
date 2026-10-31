@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 export function settingsLines(paths) {
   return ["↑ / ↓ Navigate · Enter Select · Esc Back", "Q Exit from menus · Ctrl+C Exit anywhere",
     "APPEARANCE", "Dark canvas, mint highlights, short screen/menu transitions and animated loading. WA_REDUCED_MOTION=1 disables animation; NO_COLOR=1 disables colors.",
@@ -12,5 +15,8 @@ export function settingsLines(paths) {
     "Exit closes this process and keeps your session. Logout unlinks WhatsApp, then clears credentials and the audience cache after remote success.",
     "AUDIENCE", "Automatic resolution supports Only share with… (ALLOW_LIST). Cached counts remain marked until a new privacy record arrives.",
     "CLI", "whatsapp-hd --help · source checkout: node index.js --help", "--connect · --sync-audience · --upload PATH", "--caption TEXT · --to NUMBERS · --trace",
-    "Verify every upload in My Status and with selected recipients. A Message ID alone does not prove publication."];
+    "Verify every upload in My Status and with selected recipients. A Message ID alone does not prove publication.",
+    "LICENSE & COPYRIGHT", "Copyright (C) 2026 XurXuo (DamnSit).",
+    "GNU GPLv3 (GPL-3.0-only). You may copy, modify and redistribute under GPLv3; no warranty.",
+    "License: https://github.com/DamnSit/Whatsapp-HD/blob/main/LICENSE"];
 }

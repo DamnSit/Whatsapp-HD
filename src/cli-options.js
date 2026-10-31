@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 const OPTION_VALUES = new Set(["--upload", "--caption", "--to"]);
 
 export function normalizePhoneNumber(input) {
@@ -75,6 +78,10 @@ export function usageText() {
     "",
     "Dari source checkout: node index.js [opsi].",
     'Catatan: otomatisasi audiens saat ini mendukung mode "Only share with...".',
-    "Pesan ID dari Baileys bukan bukti bahwa Status sudah terbit."
+    "Pesan ID dari Baileys bukan bukti bahwa Status sudah terbit.",
+    "",
+    "Copyright (C) 2026 XurXuo (DamnSit).",
+    "GNU GPLv3 (GPL-3.0-only). You may copy, modify and redistribute under GPLv3; no warranty.",
+    "License: https://github.com/DamnSit/Whatsapp-HD/blob/main/LICENSE"
   ].join("\n");
 }

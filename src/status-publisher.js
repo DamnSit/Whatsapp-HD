@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 XurXuo (DamnSit)
+
 import { jidNormalizedUser } from "@whiskeysockets/baileys";
 import { formatBytes, inspectMedia, prepareStatusPayload } from "./status-media.js";
 import { log } from "./logger.js";
