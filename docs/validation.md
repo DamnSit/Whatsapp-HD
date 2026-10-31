@@ -22,6 +22,16 @@ A fresh consumer installation of the tarball on Windows, Node.js 24.22.1 and npm
 
 A fresh global installation on the same Windows machine also passed `whatsapp-hd --help` outside the checkout. An isolated source installation with npm 12.2.0 completed in 29 seconds with **0 vulnerabilities**. CI pins npm 12.2.0 and uses `npm ci`; older npm versions were observed repeatedly replacing Zod during source dependency resolution until the job timed out.
 
+## Version 1.0.2 security validation
+
+On Windows, Node.js 24.22.1 and npm 12.2.0, the syntax check and all **55 tests** passed. Five new security regressions reject altered signatures and signed pre-keys, prevent invalid bundles from creating or replacing a session, preserve an actual Signal encryption/decryption round trip, and verify installation of the protections before socket creation.
+
+A fresh installation of the 1.0.2 release archive outside the checkout passed the packaged signature checks, all 16 bundled Zod declaration/resolution checks, PNG/JPEG decoding and thumbnail generation with unchanged source bytes, and CLI help. Its audit reported **0 vulnerabilities**, and `npm ls --all --omit=optional` passed without invalid dependency edges. npm 12 blocked the Baileys Node-version check and Protobuf version-warning install scripts; the compiled package still passed those runtime checks without them.
+
+The source-only Zod override remains in the repository. The release builder stages the bundled graph with matching declarations and omits that override from the published manifest. CI uses this builder and validates the independent installation. See [security review](security-review.md) for the two reproduced verification failures and the protections.
+
+Fresh live pairing and WhatsApp Status delivery after signature hardening have not been repeated. The earlier Android/media checks below predate that change; this validation did not access the user's Termux account or upload a Status.
+
 ## Unified Upload Media menu
 
 The dashboard now has six actions, beginning with **Upload Media**. Images and videos share the same native picker and their type is detected from file contents. The remaining actions retain their original behavior at their new positions.

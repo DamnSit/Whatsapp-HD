@@ -10,9 +10,11 @@ import { normalizePhoneNumber, PAIRING_HINT } from "./cli-options.js";
 import { publishStatus } from "./status-publisher.js";
 import { exists, initializeStorage, privateDirectory } from "./storage/paths.js";
 import { logoutAccount } from "./account/logout.js";
+import { installSignatureVerification, makeVerifiedSignalRepository } from "./security/signatures.js";
 
 export async function createWhatsAppClient({ paths, options = {}, question,
   onState = () => {}, report = log, dependencies = {} } = {}) {
+  installSignatureVerification();
   paths ||= await initializeStorage();
   const makeSocket = dependencies.makeWASocket || makeWASocket;
   const authState = dependencies.useMultiFileAuthState || useMultiFileAuthState;
@@ -68,7 +70,7 @@ export async function createWhatsAppClient({ paths, options = {}, question,
         if (stopped || intentionalLogout || current !== generation) return Promise.resolve();
         return enqueueWrite(() => writeKeys(data));
       };
-      const active = makeSocket({ auth, logger, markOnlineOnConnect: false, connectTimeoutMs: 60000, defaultQueryTimeoutMs: 60000 });
+      const active = makeSocket({ auth, logger, makeSignalRepository: makeVerifiedSignalRepository, markOnlineOnConnect: false, connectTimeoutMs: 60000, defaultQueryTimeoutMs: 60000 });
       socket = active;
       const live = () => !stopped && current === generation;
       handlers = {

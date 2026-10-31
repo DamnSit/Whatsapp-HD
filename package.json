@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-hd",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "GPL-3.0-only OR AGPL-3.0-only",
   "author": "XurXuo (DamnSit)",
   "type": "module",
@@ -12,10 +12,12 @@
   "files": [
     "index.js",
     "src/**/*.js",
+    "scripts/prepare-bundle.js",
     "LICENSE",
     "LICENSE-GPL-3.0.txt",
     "LICENSE-AGPL-3.0.txt",
     "NOTICE",
+    "docs/security-review.md",
     "docs/validation.md"
   ],
   "repository": {
@@ -35,6 +37,8 @@
     "start": "node index.js",
     "check": "node scripts/check.js",
     "test": "node --test",
+    "pack:release": "node scripts/pack-release.js",
+    "prepack": "node scripts/prepare-bundle.js",
     "prepublishOnly": "npm run check && npm test"
   },
   "engines": {
@@ -42,7 +46,7 @@
   },
   "dependencies": {
     "@whiskeysockets/baileys": "7.0.0-rc14",
-    "jimp": "^1.6.1",
+    "jimp": "1.6.1",
     "pino": "^9.6.0"
   },
   "bundleDependencies": ["jimp"],
@@ -51,6 +55,6 @@
     "protobufjs@7.6.6": true
   },
   "overrides": {
-    "zod": "^4.6.7"
+    "zod": "4.6.7"
   }
 }

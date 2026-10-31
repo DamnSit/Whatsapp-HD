@@ -186,6 +186,10 @@ The implementation is separated into `src/tui/`, `src/android/`, `src/storage/`,
 
 The npm package includes the executable, runtime modules, README and validation notes. The JavaScript-only Jimp dependency tree is bundled with the tested Zod fix because dependency overrides from this repository do not apply when another project installs the package. npm installs the remaining dependencies automatically. Source tests and local validation artifacts stay in the repository/workspace. See [on-device validation](docs/validation.md) for the tested environment and remaining live-account checks.
 
+Version 1.0.2 enforces cryptographic signature checks for pairing/Noise and outgoing Signal signed pre-keys. It also aligns the bundled Jimp dependency declarations with the included Zod 4.6.7. Peer identity-key changes still follow Baileys' automatic trust policy. See the [security review](docs/security-review.md) for the reproduced failures, protections, Socket CVE status and validation limits.
+
+Build a release archive with `npm run pack:release -- /absolute/output/directory`. The build stages the runtime files and bundled dependencies, removes the source-only override declaration from the staged manifest, and packs that verified graph. npm rejects packing a bundle while its source override is still declared. Test and publish the resulting `.tgz` archive.
+
 ## License and attribution
 
 Copyright (C) 2026 **XurXuo (DamnSit)**. The original project code is dual-licensed under **GNU GPLv3 only OR GNU AGPLv3 only** (`GPL-3.0-only OR AGPL-3.0-only`). You may choose either license. See [LICENSE](LICENSE), [GPLv3 terms](LICENSE-GPL-3.0.txt), [AGPLv3 terms](LICENSE-AGPL-3.0.txt) and [NOTICE](NOTICE).

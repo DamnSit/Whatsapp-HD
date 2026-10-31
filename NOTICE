@@ -22,3 +22,8 @@ This program is provided without warranty, as specified in the chosen license.
 
 Third-party dependencies retain their own licenses, copyright and attribution
 notices. The copyright notice above does not claim ownership of their code.
+
+The bundled Jimp 1.6.1 package manifests have their Zod dependency declarations
+aligned with the tested bundled Zod 4.6.7. Their code, licenses, author fields
+and copyright notices are preserved. This packaging change was made by
+XurXuo (DamnSit) on 2026-10-31.
