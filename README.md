@@ -55,6 +55,8 @@ Select **Connect / Reconnect WhatsApp**, or run:
 whatsapp-hd --connect
 ```
 
+**Important:** Android split-screen is recommended during pairing. Keep **Termux and WhatsApp open side by side** so the pairing code remains visible while you enter it in WhatsApp. The pairing prompt and CLI display this reminder.
+
 Enter your WhatsApp number, then enter the displayed pairing code in the official app: **Settings → Linked devices → Link a device → Link with phone number**. Indonesian local `08…` pairing numbers are converted to `628…`. Wait for the connected message. `--connect` directly starts the connection flow and never recursively opens the dashboard.
 
 ## Upload and caption workflow

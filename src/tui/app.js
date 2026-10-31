@@ -13,6 +13,7 @@ import { uploadScreen } from "./upload-screen.js";
 import { createWhatsAppClient } from "../whatsapp-client.js";
 import { setLogSink } from "../logger.js";
 import { initializeStorage } from "../storage/paths.js";
+import { PAIRING_HINT } from "../cli-options.js";
 
 export class TerminalUI {
   constructor({ input = process.stdin, output = process.stdout, version = "", onExit = () => {},
@@ -181,7 +182,7 @@ export class TerminalUI {
   async question(prompt) {
     const previous = this.screen;
     try {
-      const result = await this.editCaption("", "Pair WhatsApp", [prompt]);
+      const result = await this.editCaption("", "Pair WhatsApp", [PAIRING_HINT, prompt]);
       if (result.skipped || this.closed) throw new Error("Pairing cancelled.");
       return result.value;
     } finally { this.setScreen(previous); this.render(); }

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 XurXuo (DamnSit)
 
 const OPTION_VALUES = new Set(["--upload", "--caption", "--to"]);
+export const PAIRING_HINT = "IMPORTANT: Split-screen (Termux + WhatsApp) is recommended to keep the pairing code visible.";
 
 export function normalizePhoneNumber(input) {
   let number = String(input ?? "").replace(/\D/g, "");
@@ -77,6 +78,7 @@ export function usageText() {
     "  --help, -h          Tampilkan bantuan",
     "",
     "Dari source checkout: node index.js [opsi].",
+    PAIRING_HINT,
     'Catatan: otomatisasi audiens saat ini mendukung mode "Only share with...".',
     "Pesan ID dari Baileys bukan bukti bahwa Status sudah terbit.",
     "",

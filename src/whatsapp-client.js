@@ -6,7 +6,7 @@ import pino from "pino";
 import path from "node:path";
 import { log, errorMessage } from "./logger.js";
 import { loadStatusAudience, parseStatusPrivacy, resolveStatusRecipients, saveStatusAudience } from "./status-audience.js";
-import { normalizePhoneNumber } from "./cli-options.js";
+import { normalizePhoneNumber, PAIRING_HINT } from "./cli-options.js";
 import { publishStatus } from "./status-publisher.js";
 import { exists, initializeStorage, privateDirectory } from "./storage/paths.js";
 import { logoutAccount } from "./account/logout.js";
@@ -118,6 +118,7 @@ export async function createWhatsAppClient({ paths, options = {}, question,
       for (const [event, handler] of Object.entries(handlers)) active.ev.on(event, handler);
       if (!auth.creds.registered) {
         if (!question) throw new Error("Pairing requires an interactive phone-number prompt.");
+        report.info(PAIRING_HINT);
         const number = normalizePhoneNumber(await question("WhatsApp number (international format / 0812…):"));
         await new Promise((resolve) => setTimeout(resolve, dependencies.pairingDelay ?? 1000));
         if (!live() || intentionalLogout) return;
