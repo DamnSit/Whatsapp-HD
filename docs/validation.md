@@ -2,13 +2,13 @@
 
 The TUI implementation is available in this working tree. The npm executable is `whatsapp-hd`; package and global-installation checks are documented below.
 
-## Unreleased media summary fixes
+## Version 1.0.4 media summary validation
 
-The phone's 1.0.3 caption screen showed only `MP4 · 6.75 MB`: video inspection validated frames but did not collect dimensions or frame rate. The local source now reads the first video stream's resolution and average FPS with FFprobe, supplied by the existing FFmpeg package. Caption and confirmation screens share one summary, such as `MP4 · 6.75 MB · 1920x1080 · 60FPS`; images show their full source resolution without FPS. Summary lines appear before filenames so metadata stays visible in compact caption layouts. Missing average FPS is shown explicitly instead of substituting a guessed rate.
+The phone's 1.0.3 caption screen showed only `MP4 · 6.75 MB`: video inspection validated frames but did not collect dimensions or frame rate. Version 1.0.4 reads the first video stream's resolution and average FPS with FFprobe, supplied by the existing FFmpeg package. Caption and confirmation screens share one summary, such as `MP4 · 6.75 MB · 1920x1080 · 60FPS`; images show their full source resolution without FPS. Summary lines appear before filenames so metadata stays visible in compact caption layouts. Missing average FPS is shown explicitly instead of substituting a guessed rate.
 
 On Windows with FFmpeg/FFprobe 9.0.2, the syntax check, all **70 tests**, CLI help and audit passed; the audit found **0 vulnerabilities**, with npm dependencies unchanged. Real JPEG, PNG, WebP, MP4 and M4V fixtures verified source dimensions, original bytes, captions and invalid-file rejection. Additional real 1920×1080 videos verified 60 FPS and 60000/1001 FPS, displayed as 59.94 FPS. Regression tests also check compact caption screens, cancelled probes and both caption/confirmation metadata during an image-to-video selection change.
 
-These fixes are available in the source checkout and are not included in the published 1.0.3 package. The phone was inspected through a screenshot; the changes have not yet been applied or validated in Termux. Preview metadata is illustrative.
+The phone was inspected through a screenshot; the 1.0.4 media changes have not yet been applied or validated in Termux. Preview metadata is illustrative.
 
 ## Version 1.0.3 pairing and TUI validation
 
