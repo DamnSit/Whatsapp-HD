@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-only OR AGPL-3.0-only
 // Copyright (C) 2026 XurXuo (DamnSit)
 
 export function settingsLines(paths) {
@@ -17,6 +17,6 @@ export function settingsLines(paths) {
     "CLI", "whatsapp-hd --help · source checkout: node index.js --help", "--connect · --sync-audience · --upload PATH", "--caption TEXT · --to NUMBERS · --trace",
     "Verify every upload in My Status and with selected recipients. A Message ID alone does not prove publication.",
     "LICENSE & COPYRIGHT", "Copyright (C) 2026 XurXuo (DamnSit).",
-    "GNU GPLv3 (GPL-3.0-only). You may copy, modify and redistribute under GPLv3; no warranty.",
+    "Dual license: GPLv3 OR AGPLv3 (versions 3 only). You may choose either; no warranty.",
     "License: https://github.com/DamnSit/Whatsapp-HD/blob/main/LICENSE"];
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-only OR AGPL-3.0-only
 // Copyright (C) 2026 XurXuo (DamnSit)
 
 const OPTION_VALUES = new Set(["--upload", "--caption", "--to"]);
@@ -81,7 +81,7 @@ export function usageText() {
     "Pesan ID dari Baileys bukan bukti bahwa Status sudah terbit.",
     "",
     "Copyright (C) 2026 XurXuo (DamnSit).",
-    "GNU GPLv3 (GPL-3.0-only). You may copy, modify and redistribute under GPLv3; no warranty.",
+    "Dual license: GPLv3 OR AGPLv3 (versions 3 only). You may choose either; no warranty.",
     "License: https://github.com/DamnSit/Whatsapp-HD/blob/main/LICENSE"
   ].join("\n");
 }

@@ -1,7 +1,7 @@
 {
   "name": "whatsapp-hd",
   "version": "1.0.1",
-  "license": "GPL-3.0-only",
+  "license": "GPL-3.0-only OR AGPL-3.0-only",
   "author": "XurXuo (DamnSit)",
   "type": "module",
   "packageManager": "npm@12.2.0",
@@ -13,6 +13,8 @@
     "index.js",
     "src/**/*.js",
     "LICENSE",
+    "LICENSE-GPL-3.0.txt",
+    "LICENSE-AGPL-3.0.txt",
     "NOTICE",
     "docs/validation.md"
   ],

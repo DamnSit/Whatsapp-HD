@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-only OR AGPL-3.0-only
 // Copyright (C) 2026 XurXuo (DamnSit)
 
 // Optional integration check: run in Termux after installing FFmpeg.

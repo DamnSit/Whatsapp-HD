@@ -186,8 +186,10 @@ The npm package includes the executable, runtime modules, README and validation 
 
 ## License and attribution
 
-Copyright (C) 2026 **XurXuo (DamnSit)**. The original project code is licensed under **GNU GPLv3 only** (`GPL-3.0-only`); see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Copyright (C) 2026 **XurXuo (DamnSit)**. The original project code is dual-licensed under **GNU GPLv3 only OR GNU AGPLv3 only** (`GPL-3.0-only OR AGPL-3.0-only`). You may choose either license. See [LICENSE](LICENSE), [GPLv3 terms](LICENSE-GPL-3.0.txt), [AGPLv3 terms](LICENSE-AGPL-3.0.txt) and [NOTICE](NOTICE).
 
-When distributing copies or modified versions, preserve the applicable original copyright and license notices, including the author's name in those notices. Modified versions must identify their changes and dates and comply with GPLv3's source-code and licensing requirements. These notice-preservation obligations concern redistribution; GPLv3 does not impose a blanket ban on editing every name or UI credit. Third-party dependencies retain their own licenses and notices.
+When distributing copies or modified versions, preserve the applicable original copyright and license notices, including the author's name in those notices. Modified versions must identify their changes and dates and comply with the source-code and licensing requirements of the license you choose. These notice-preservation obligations concern redistribution; they do not impose a blanket ban on editing every name or UI credit. Third-party dependencies retain their own licenses and notices.
 
-This program is provided without warranty as set out in GPLv3.
+If you choose AGPLv3 and modify the program, section 13 requires offering the corresponding source to users who interact with that modified version remotely over a network, when applicable. Users choosing GPLv3 are not subject to this additional AGPL requirement.
+
+This program is provided without warranty as set out in the chosen license.

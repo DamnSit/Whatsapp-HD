@@ -4,16 +4,21 @@ Copyright (C) 2026 XurXuo (DamnSit)
 Author credit: XurXuo <https://t.me/XurXuo>
 Project source: https://github.com/DamnSit/Whatsapp-HD
 
-The original code of this project is licensed under the GNU General Public
-License, version 3 only (SPDX: GPL-3.0-only). See LICENSE for the full terms.
+The original code of this project is dual-licensed, at your option, under
+the GNU General Public License, version 3 only, or the GNU Affero General
+Public License, version 3 only (SPDX: GPL-3.0-only OR AGPL-3.0-only).
+See LICENSE, LICENSE-GPL-3.0.txt and LICENSE-AGPL-3.0.txt for the full terms.
 
 When conveying copies, preserve the applicable original copyright and license
-notices as required by GPLv3. Modified versions must carry prominent notices
-of the changes and their dates, and satisfy the applicable source-code and
+notices as required by the license you choose. Modified versions must carry
+prominent notices of the changes and their dates, and satisfy the applicable source-code and
 licensing requirements. You may add notices for your own contributions while
 retaining the original notices.
 
-This program is provided without warranty, as specified in GPLv3.
+If you choose AGPLv3, its network-interaction source-offer requirement applies
+when its conditions are met. You may instead choose GPLv3.
+
+This program is provided without warranty, as specified in the chosen license.
 
 Third-party dependencies retain their own licenses, copyright and attribution
 notices. The copyright notice above does not claim ownership of their code.
