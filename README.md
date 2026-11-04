@@ -9,7 +9,6 @@
     <a href="https://www.npmjs.com/package/whatsapp-hd"><img src="https://img.shields.io/npm/dt/whatsapp-hd?style=for-the-badge&label=Total%20Downloads&labelColor=0d1117" alt="Total npm package downloads" /></a>
     <a href="https://github.com/DamnSit/Whatsapp-HD/commits/main"><img src="https://img.shields.io/github/last-commit/DamnSit/Whatsapp-HD?style=for-the-badge&labelColor=0d1117" alt="Last commit" /></a>
   </p>
-  <p><sub>Total npm package downloads across all platforms; Termux-only installs are not separately tracked.</sub></p>
 
   <p>
     <a href="#install-and-launch"><b>Quick Start</b></a> •
