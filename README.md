@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/whatsapp-hd-logo.jpg" width="220" alt="Whatsapp-HD logo" />
+  <img src="docs/assets/whatsapp-hd-logo.webp" width="220" alt="Whatsapp-HD logo" />
   <h1>Whatsapp-HD</h1>
   <p><strong>Interactive terminal dashboard and CLI for WhatsApp image/video Status.</strong></p>
   <p>Built for Termux on Android · Node.js · Baileys</p>
