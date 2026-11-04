@@ -1,6 +1,28 @@
-# Whatsapp-HD
+<div align="center">
+  <img src="docs/assets/whatsapp-hd-logo.jpg" width="220" alt="Whatsapp-HD logo" />
+  <h1>Whatsapp-HD</h1>
+  <p><strong>Interactive terminal dashboard and CLI for WhatsApp image/video Status.</strong></p>
+  <p>Built for Termux on Android · Node.js · Baileys</p>
 
-An interactive terminal application for WhatsApp image/video Status, designed for Termux on Android. The existing Baileys publisher is shared by the dashboard and CLI. Original media bytes remain the upload source; only image preview thumbnails are generated.
+  <p>
+    <a href="https://github.com/DamnSit/Whatsapp-HD/stargazers"><img src="https://img.shields.io/github/stars/DamnSit/Whatsapp-HD?style=for-the-badge&labelColor=0d1117" alt="GitHub stars" /></a>
+    <a href="https://github.com/DamnSit/Whatsapp-HD/blob/main/LICENSE"><img src="https://img.shields.io/github/license/DamnSit/Whatsapp-HD?style=for-the-badge&labelColor=0d1117" alt="License" /></a>
+    <a href="https://github.com/DamnSit/Whatsapp-HD/commits/main"><img src="https://img.shields.io/github/last-commit/DamnSit/Whatsapp-HD?style=for-the-badge&labelColor=0d1117" alt="Last commit" /></a>
+  </p>
+
+  <p>
+    <a href="#install-and-launch"><b>Quick Start</b></a> •
+    <a href="#dashboard-and-controls">Dashboard</a> •
+    <a href="#pair-whatsapp">Pair WhatsApp</a> •
+    <a href="#upload-and-caption-workflow">Upload Guide</a> •
+    <a href="docs/validation.md">Validation</a> •
+    <a href="docs/security-review.md">Security</a>
+  </p>
+</div>
+
+<br />
+
+The dashboard and CLI share the same Baileys publisher. Original media bytes remain the upload source; only image preview thumbnails are generated.
 
 The interface, CLI help, application messages, and displayed dates use English.
 
